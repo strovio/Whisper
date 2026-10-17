@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Whisper Chiaroscuro — Формантный тренажёр</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100dvh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        input[type="range"] {
+            accent-color: #38bdf8;
+        }
+    </style>
+</head>
+<body class="flex flex-col justify-between h-full w-full relative select-none">
+
+    <!-- Верхняя панель обратной связи (Статус вокального тракта) -->
+    <header class="w-full px-3 pt-3 pb-1 z-20 shrink-0">
+        <div id="statusCard" class="w-full rounded-2xl p-3.5 transition-all duration-300 border border-slate-800 bg-slate-900/90 backdrop-blur-md shadow-lg">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <!-- Индикатор-иконка состояния -->
+                    <div id="statusDot" class="w-4 h-4 rounded-full bg-slate-600 shrink-0 shadow-sm transition-all duration-300"></div>
+                    <div class="truncate">
+                        <h1 id="statusTitle" class="text-base sm:text-lg font-bold tracking-tight text-slate-200 truncate">
+                            Нажмите кнопку микрофона
+                        </h1>
+                        <p id="statusSubtitle" class="text-xs sm:text-sm text-slate-400 line-clamp-2 leading-snug mt-0.5">
+                            Шепчите гласные (И-Э-А-О-У), удерживая две форманты в целевых зонах
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Счётчик стабильности удержания кьяроскуро -->
+                <div id="qualityBadge" class="hidden flex-col items-end shrink-0 bg-slate-950/70 px-3 py-1.5 rounded-xl border border-slate-800/80">
+                    <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Баланс</span>
+                    <span id="scoreText" class="text-sm font-extrabold text-emerald-400 tabular-nums">0%</span>
+                </div>
+            </div>
+
+            <!-- Полоса прогресса удержания правильной позиции -->
+            <div class="w-full bg-slate-950/80 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                <div id="holdProgressBar" class="h-full w-0 bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-150 rounded-full"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Центральная область: Интерактивный график спектра и водопад формант -->
+    <main class="relative flex-1 w-full min-h-0 px-3 py-1 flex flex-col">
+        <div class="relative flex-1 w-full h-full rounded-2xl overflow-hidden border border-slate-800/90 bg-slate-950 shadow-inner">
+            <canvas id="spectrumCanvas"></canvas>
+
+            <!-- Живые плашки обнаруженных пиков поверх графика -->
+            <div id="liveReadout" class="hidden absolute top-3 left-3 right-3 flex justify-between items-center pointer-events-none">
+                <div class="flex gap-2">
+                    <div id="peak1Badge" class="px-2.5 py-1 rounded-lg bg-slate-900/85 border border-slate-700/80 backdrop-blur text-xs font-semibold tabular-nums text-slate-300">
+                        F1 (певч.): <span id="peak1Val" class="font-bold text-white">—</span>
+                    </div>
+                    <div id="peak2Badge" class="px-2.5 py-1 rounded-lg bg-slate-900/85 border border-slate-700/80 backdrop-blur text-xs font-semibold tabular-nums text-slate-300">
+                        F2 (верх.): <span id="peak2Val" class="font-bold text-white">—</span>
+                    </div>
+                </div>
+                <button id="toggleSettingsBtn" class="pointer-events-auto px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-300 flex items-center gap-1.5 active:scale-95 transition">
+                    <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                    </svg>
+                    <span>Частоты</span>
+                </button>
+            </div>
+
+            <!-- Компактное всплывающее окно подстройки целевых формант под тип голоса -->
+            <div id="settingsPopover" class="hidden absolute top-12 right-3 w-72 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-2xl p-3.5 shadow-2xl z-30">
+                <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">Целевые зоны (Ваш голос)</span>
+                    <button id="resetTargetsBtn" class="text-[11px] text-sky-400 hover:text-sky-300 font-medium">Сбросить (2461 / 3059)</button>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">1-я форманта (Певческая):</span>
+                            <span id="target1Label" class="font-bold text-sky-400 tabular-nums">2461 Гц</span>
+                        </div>
+                        <input id="target1Slider" type="range" min="2200" max="2750" step="10" value="2461" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">2-я форманта (Верхняя):</span>
+                            <span id="target2Label" class="font-bold text-emerald-400 tabular-nums">3059 Гц</span>
+                        </div>
+                        <input id="target2Slider" type="range" min="2800" max="3500" step="10" value="3059" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-tight pt-1 border-t border-slate-800">
+                        Вы также можете двигать целевые зоны прямо пальцем по графику.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Стартовый экран поверх графика с одной большой кнопкой включения микрофона -->
+            <div id="startOverlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="max-w-xs w-full flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-sky-500/20 border border-emerald-500/40 flex items-center justify-center mb-4 shadow-lg shadow-emerald-950/50">
+                        <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-white mb-1.5">Whisper Chiaroscuro</h2>
+                    <p class="text-xs text-slate-400 mb-6 leading-relaxed">
+                        Анализатор настроен на поиск двух высоких формант шёпота (<strong class="text-sky-400">~2461 Гц</strong> и <strong class="text-emerald-400">~3059 Гц</strong>) без подавления высоких частот.
+                    </p>
+                    <button id="startMicBtn" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-400 hover:to-sky-400 text-slate-950 font-extrabold text-base shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition flex items-center justify-center gap-2.5">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z"/>
+                            <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"/>
+                        </svg>
+                        <span>Включить микрофон</span>
+                    </button>
+                    <p id="errorMsg" class="hidden mt-3 text-xs text-rose-400 bg-rose-950/60 border border-rose-800/70 rounded-xl p-2.5"></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Нижняя компактная легенда-памятка -->
+    <footer class="w-full px-3 pb-3 pt-1 shrink-0 z-10">
+        <div class="grid grid-cols-4 gap-1.5 text-[10px] sm:text-xs bg-slate-900/80 border border-slate-800/80 rounded-xl p-2 text-center">
+            <div class="flex flex-col items-center justify-center px-1 py-0.5 rounded-lg bg-emerald-950/40 border border-emerald-800/40">
+                <span class="font-bold text-emerald-400">2 пика в цели</span>
+                <span class="text-slate-400 leading-tight">Кьяроскуро!</span>
+            </div>
+            <div class="flex flex-col items-center justify-center px-1 py-0.5 rounded-lg bg-amber-950/40 border border-amber-800/40">
+                <span class="font-bold text-amber-400">Ушли влево</span>
+                <span class="text-slate-400 leading-tight">Перерасширил</span>
+            </div>
+            <div class="flex flex-col items-center justify-center px-1 py-0.5 rounded-lg bg-purple-950/40 border border-purple-800/40">
+                <span class="font-bold text-purple-400">Нет ~3000 Гц</span>
+                <span class="text-slate-400 leading-tight">Подзадран</span>
+            </div>
+            <div class="flex flex-col items-center justify-center px-1 py-0.5 rounded-lg bg-rose-950/40 border border-rose-800/40">
+                <span class="font-bold text-rose-400">Плоский шум</span>
+                <span class="text-slate-400 leading-tight">Гортань зажата</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Частотный диапазон отображения на графике (Гц)
+        const MIN_FREQ = 1400;
+        const MAX_FREQ = 4100;
+
+        // Целевые частоты по умолчанию (из описания пользователя)
+        let targetF1 = 2461; // Высокая певческая форманта
+        let targetF2 = 3059; // Вторая верхняя форманта
+        const TOLERANCE_HZ = 230; // Допустимый коридор вокруг каждой целевой форманты (±230 Гц)
+
+        // Состояние Web Audio API
+        let audioCtx = null;
+        let analyser = null;
+        let freqData = null;
+        let isRunning = false;
+
+        // Сглаженная спектральная огибающая для выделения формант из шёпота
+        let smoothedEnvelope = null;
+        let waterfallHistory = [];
+        const MAX_WATERFALL_ROWS = 75;
+
+        // Переменные для стабильной диагностики без визуального дребезга
+        let currentDiagnosis = 'SILENCE';
+        let stateConfidence = {
+            GOOD: 0,
+            OVEREXPANDED: 0,
+            RAISED: 0,
+            CONSTRICTED: 0,
+            SILENCE: 1
+        };
+        let holdScore = 0; // Накопительный индикатор удержания правильной позиции (0..100)
+
+        // DOM элементы
+        const canvas = document.getElementById('spectrumCanvas');
+        const ctx = canvas.getContext('2d');
+        const startOverlay = document.getElementById('startOverlay');
+        const startMicBtn = document.getElementById('startMicBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const statusCard = document.getElementById('statusCard');
+        const statusDot = document.getElementById('statusDot');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusSubtitle = document.getElementById('statusSubtitle');
+        const qualityBadge = document.getElementById('qualityBadge');
+        const scoreText = document.getElementById('scoreText');
+        const holdProgressBar = document.getElementById('holdProgressBar');
+        const liveReadout = document.getElementById('liveReadout');
+        const peak1Val = document.getElementById('peak1Val');
+        const peak2Val = document.getElementById('peak2Val');
+        const peak1Badge = document.getElementById('peak1Badge');
+        const peak2Badge = document.getElementById('peak2Badge');
+        const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+        const settingsPopover = document.getElementById('settingsPopover');
+        const target1Slider = document.getElementById('target1Slider');
+        const target2Slider = document.getElementById('target2Slider');
+        const target1Label = document.getElementById('target1Label');
+        const target2Label = document.getElementById('target2Label');
+        const resetTargetsBtn = document.getElementById('resetTargetsBtn');
+
+        // Адаптивный размер Canvas с учётом Retina/DPI экранов телефонов
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            if (!isRunning) {
+                drawIdleFrame();
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Перевод частоты в X-координату и обратно
+        function freqToX(freq, width) {
+            return ((freq - MIN_FREQ) / (MAX_FREQ - MIN_FREQ)) * width;
+        }
+        function xToFreq(x, width) {
+            return MIN_FREQ + (x / width) * (MAX_FREQ - MIN_FREQ);
+        }
+
+        // Управление настройками целевых частот
+        toggleSettingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPopover.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!settingsPopover.contains(e.target) && e.target !== toggleSettingsBtn) {
+                settingsPopover.classList.add('hidden');
+            }
+        });
+
+        target1Slider.addEventListener('input', (e) => {
+            targetF1 = parseInt(e.target.value, 10);
+            if (targetF2 - targetF1 < 350) {
+                targetF2 = Math.min(3500, targetF1 + 350);
+                target2Slider.value = targetF2;
+                target2Label.textContent = `${targetF2} Гц`;
+            }
+            target1Label.textContent = `${targetF1} Гц`;
+        });
+
+        target2Slider.addEventListener('input', (e) => {
+            targetF2 = parseInt(e.target.value, 10);
+            if (targetF2 - targetF1 < 350) {
+                targetF1 = Math.max(2200, targetF2 - 350);
+                target1Slider.value = targetF1;
+                target1Label.textContent = `${targetF1} Гц`;
+            }
+            target2Label.textContent = `${targetF2} Гц`;
+        });
+
+        resetTargetsBtn.addEventListener('click', () => {
+            targetF1 = 2461;
+            targetF2 = 3059;
+            target1Slider.value = targetF1;
+            target2Slider.value = targetF2;
+            target1Label.textContent = `${targetF1} Гц`;
+            target2Label.textContent = `${targetF2} Гц`;
+        });
+
+        // Перетаскивание целевых зон прямо пальцем по графику
+        let draggingTarget = null;
+        function handlePointerDown(clientX) {
+            if (!isRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const f = xToFreq(x, rect.width);
+            if (Math.abs(f - targetF1) < 220) {
+                draggingTarget = 1;
+            } else if (Math.abs(f - targetF2) < 220) {
+                draggingTarget = 2;
+            }
+        }
+        function handlePointerMove(clientX) {
+            if (!draggingTarget) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+            const f = Math.round(xToFreq(x, rect.width) / 10) * 10;
+            if (draggingTarget === 1) {
+                targetF1 = Math.max(2150, Math.min(targetF2 - 350, f));
+                target1Slider.value = targetF1;
+                target1Label.textContent = `${targetF1} Гц`;
+            } else if (draggingTarget === 2) {
+                targetF2 = Math.max(targetF1 + 350, Math.min(3550, f));
+                target2Slider.value = targetF2;
+                target2Label.textContent = `${targetF2} Гц`;
+            }
+        }
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) handlePointerDown(e.touches[0].clientX);
+        }, { passive: true });
+        canvas.addEventListener('touchmove', (e) => {
+            if (draggingTarget && e.touches.length === 1) handlePointerMove(e.touches[0].clientX);
+        }, { passive: true });
+        window.addEventListener('touchend', () => { draggingTarget = null; });
+        canvas.addEventListener('mousedown', (e) => handlePointerDown(e.clientX));
+        window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
+        window.addEventListener('mouseup', () => { draggingTarget = null; });
+
+        // Запуск микрофона с отключением шумоподавления (иначе телефон срежет шёпот!)
+        startMicBtn.addEventListener('click', async () => {
+            errorMsg.classList.add('hidden');
+            startMicBtn.disabled = true;
+            startMicBtn.querySelector('span').textContent = 'Подключение...';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        channelCount: 1
+                    }
+                });
+
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
+                const source = audioCtx.createMediaStreamSource(stream);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 4096; // Высокое разрешение: ~11 Гц на бин
+                analyser.smoothingTimeConstant = 0.65;
+
+                source.connect(analyser);
+                freqData = new Float32Array(analyser.frequencyBinCount);
+                smoothedEnvelope = new Float32Array(analyser.frequencyBinCount);
+                smoothedEnvelope.fill(-100);
+
+                isRunning = true;
+                startOverlay.classList.add('hidden');
+                liveReadout.classList.remove('hidden');
+                liveReadout.classList.add('flex');
+                qualityBadge.classList.remove('hidden');
+                qualityBadge.classList.add('flex');
+
+                updateStatusUI('SILENCE');
+                requestAnimationFrame(processAudioLoop);
+            } catch (err) {
+                startMicBtn.disabled = false;
+                startMicBtn.querySelector('span').textContent = 'Включить микрофон';
+                errorMsg.textContent = 'Не удалось получить доступ к микрофону. Пожалуйста, разрешите доступ в браузере.';
+                errorMsg.classList.remove('hidden');
+            }
+        });
+
+        // Вычисление огибающей спектра и анализ двух формант шёпота
+        function analyzeWhisperSpectrum(sampleRate) {
+            analyser.getFloatFrequencyData(freqData);
+            const binCount = analyser.frequencyBinCount;
+            const binHz = sampleRate / analyser.fftSize;
+
+            const minBin = Math.max(2, Math.floor(MIN_FREQ / binHz));
+            const maxBin = Math.min(binCount - 3, Math.ceil(MAX_FREQ / binHz));
+
+            // 1. Спектральное сглаживание (ширина окна ~160 Гц) для выделения огибающей формант из шума шёпота
+            const halfWindow = Math.max(3, Math.round(85 / binHz));
+            let sumDb = 0;
+            let maxDb = -120;
+            let count = 0;
+
+            for (let i = minBin; i <= maxBin; i++) {
+                let wSum = 0;
+                let wTotal = 0;
+                for (let k = -halfWindow; k <= halfWindow; k++) {
+                    const idx = i + k;
+                    if (idx >= 0 && idx < binCount) {
+                        // Треугольное окно весов
+                        const weight = (halfWindow + 1 - Math.abs(k));
+                        const val = Math.max(-110, freqData[idx]);
+                        wSum += val * weight;
+                        wTotal += weight;
+                    }
+                }
+                const currentEnv = wSum / wTotal;
+                // Временное сглаживание огибающей
+                smoothedEnvelope[i] = smoothedEnvelope[i] * 0.62 + currentEnv * 0.38;
+
+                const envVal = smoothedEnvelope[i];
+                if (i >= Math.floor(1750 / binHz) && i <= Math.ceil(3650 / binHz)) {
+                    sumDb += envVal;
+                    if (envVal > maxDb) maxDb = envVal;
+                    count++;
+                }
+            }
+
+            const meanDb = count > 0 ? sumDb / count : -100;
+            const prominenceRange = maxDb - meanDb; // Насколько пики возвышаются над средним уровнем шума
+
+            // 2. Проверка наличия слышимого шёпота
+            if (maxDb < -76) {
+                return {
+                    state: 'SILENCE',
+                    peaks: [],
+                    meanDb,
+                    maxDb,
+                    prominenceRange
+                };
+            }
+
+            // 3. Поиск локальных максимумов (формантных пиков) на огибающей в зоне 1650..3850 Гц
+            const searchMinBin = Math.floor(1650 / binHz);
+            const searchMaxBin = Math.ceil(3850 / binHz);
+            const rawPeaks = [];
+            const neighborSpan = Math.max(4, Math.round(110 / binHz));
+
+            for (let i = searchMinBin; i <= searchMaxBin; i++) {
+                const v = smoothedEnvelope[i];
+                let isLocalMax = true;
+                let localMinLeft = v;
+                let localMinRight = v;
+
+                for (let k = 1; k <= neighborSpan; k++) {
+                    if (smoothedEnvelope[i - k] > v || smoothedEnvelope[i + k] >= v) {
+                        isLocalMax = false;
+                        break;
+                    }
+                }
+                if (!isLocalMax) continue;
+
+                // Оцениваем локальную выраженность пика относительно соседних впадин (±320 Гц)
+                const valleySpan = Math.round(320 / binHz);
+                for (let k = 1; k <= valleySpan; k++) {
+                    if (i - k >= minBin) localMinLeft = Math.min(localMinLeft, smoothedEnvelope[i - k]);
+                    if (i + k <= maxBin) localMinRight = Math.min(localMinRight, smoothedEnvelope[i + k]);
+                }
+                const valleyRef = Math.max(localMinLeft, localMinRight);
+                const localProminence = v - valleyRef;
+                const heightAboveMean = v - meanDb;
+
+                // Пик должен быть достаточно заметен над уровнем шума
+                if (heightAboveMean > 2.2 && localProminence > 1.4 && (maxDb - v) < 15) {
+                    rawPeaks.push({
+                        bin: i,
+                        freq: Math.round(i * binHz),
+                        db: v,
+                        prominence: localProminence + heightAboveMean * 0.6
+                    });
+                }
+            }
+
+            // Объединяем слишком близкие пики (ближе 280 Гц друг к другу)
+            rawPeaks.sort((a, b) => b.db - a.db);
+            const distinctPeaks = [];
+            for (const p of rawPeaks) {
+                if (!distinctPeaks.some(existing => Math.abs(existing.freq - p.freq) < 280)) {
+                    distinctPeaks.push(p);
+                }
+            }
+            distinctPeaks.sort((a, b) => a.freq - b.freq);
+
+            // 4. Диагностика вокальной позиции по методу Кена Бозмана
+            // Находим пики, попадающие в целевую зону 1 (~2461 Гц) и целевую зону 2 (~3059 Гц)
+            const f1Match = distinctPeaks.find(p => Math.abs(p.freq - targetF1) <= TOLERANCE_HZ);
+            const f2Match = distinctPeaks.find(p => Math.abs(p.freq - targetF2) <= TOLERANCE_HZ + 30);
+
+            // Проверяем смещённые вниз форманты (~1850..2230 Гц и ~2350..2680 Гц без ~3000 Гц)
+            const lowShiftedPeak = distinctPeaks.find(p => p.freq >= 1750 && p.freq < targetF1 - TOLERANCE_HZ + 40);
+            const midPeak = distinctPeaks.find(p => p.freq >= 2250 && p.freq <= 2750);
+
+            let detectedState = 'CONSTRICTED';
+
+            if (prominenceRange < 4.3 || distinctPeaks.length === 0) {
+                // Много широкополосного шума, форманты размыты и не выделяются
+                detectedState = 'CONSTRICTED';
+            } else if (f1Match && f2Match && Math.abs(f1Match.db - f2Match.db) < 12.5) {
+                // Обе целевые форманты (~2461 и ~3059 Гц) отчётливо присутствуют!
+                detectedState = 'GOOD';
+            } else if (lowShiftedPeak && !f2Match) {
+                // Форманты съехали вниз (например 2000 и 2500 Гц), а ~3000 Гц нет -> перерасширение глотки
+                detectedState = 'OVEREXPANDED';
+            } else if ((f1Match || midPeak) && !f2Match) {
+                // Первая форманта есть (~2400-2600 Гц), но вторая на ~3000 Гц пропала -> голос подзадран
+                detectedState = 'RAISED';
+            } else if (!f1Match && f2Match && lowShiftedPeak) {
+                detectedState = 'OVEREXPANDED';
+            } else {
+                detectedState = 'CONSTRICTED';
+            }
+
+            return {
+                state: detectedState,
+                peaks: distinctPeaks,
+                f1Match,
+                f2Match,
+                lowShiftedPeak,
+                meanDb,
+                maxDb,
+                prominenceRange
+            };
+        }
+
+        // Плавное обновление статуса, чтобы подсказки читались легко и не мигали
+        function updateDiagnosisWithHysteresis(instantState) {
+            const decay = 0.86;
+            for (const key in stateConfidence) {
+                stateConfidence[key] *= decay;
+            }
+            stateConfidence[instantState] += (1 - decay);
+
+            // Обновляем шкалу удержания правильной позиции
+            if (instantState === 'GOOD') {
+                holdScore = Math.min(100, holdScore + 1.8);
+            } else if (instantState === 'SILENCE') {
+                holdScore = Math.max(0, holdScore - 0.5);
+            } else {
+                holdScore = Math.max(0, holdScore - 1.4);
+            }
+
+            const roundedScore = Math.round(holdScore);
+            scoreText.textContent = `${roundedScore}%`;
+            holdProgressBar.style.width = `${roundedScore}%`;
+
+            // Выбираем доминирующее состояние
+            let bestState = currentDiagnosis;
+            let bestVal = -1;
+            for (const key in stateConfidence) {
+                if (stateConfidence[key] > bestVal) {
+                    bestVal = stateConfidence[key];
+                    bestState = key;
+                }
+            }
+
+            if (bestState !== currentDiagnosis && bestVal > 0.38) {
+                currentDiagnosis = bestState;
+                updateStatusUI(currentDiagnosis);
+            }
+        }
+
+        function updateStatusUI(state) {
+            if (state === 'GOOD') {
+                statusCard.className = 'w-full rounded-2xl p-3.5 transition-all duration-300 border border-emerald-500/60 bg-emerald-950/50 backdrop-blur-md shadow-lg shadow-emerald-950/50';
+                statusDot.className = 'w-4 h-4 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_14px_#34d399] animate-pulse';
+                statusTitle.className = 'text-base sm:text-lg font-extrabold tracking-tight text-emerald-300 truncate';
+                statusTitle.textContent = 'Отлично! Чистое Кьяроскуро';
+                statusSubtitle.className = 'text-xs sm:text-sm text-emerald-100/90 line-clamp-2 leading-snug mt-0.5';
+                statusSubtitle.textContent = `Обе форманты (~${targetF1} и ~${targetF2} Гц) звучат сбалансированно. Удерживайте это ощущение!`;
+            } else if (state === 'OVEREXPANDED') {
+                statusCard.className = 'w-full rounded-2xl p-3.5 transition-all duration-300 border border-amber-500/60 bg-amber-950/50 backdrop-blur-md shadow-lg';
+                statusDot.className = 'w-4 h-4 rounded-full bg-amber-400 shrink-0 shadow-[0_0_12px_#fbbf24]';
+                statusTitle.className = 'text-base sm:text-lg font-extrabold tracking-tight text-amber-300 truncate';
+                statusTitle.textContent = 'Перерасширяете глотку';
+                statusSubtitle.className = 'text-xs sm:text-sm text-amber-100/90 line-clamp-2 leading-snug mt-0.5';
+                statusSubtitle.textContent = 'Форманты ушли слишком низко (влево), верхушка ~3000 Гц пропала. Соберите звук естественнее.';
+            } else if (state === 'RAISED') {
+                statusCard.className = 'w-full rounded-2xl p-3.5 transition-all duration-300 border border-purple-500/60 bg-purple-950/50 backdrop-blur-md shadow-lg';
+                statusDot.className = 'w-4 h-4 rounded-full bg-purple-400 shrink-0 shadow-[0_0_12px_#c084fc]';
+                statusTitle.className = 'text-base sm:text-lg font-extrabold tracking-tight text-purple-300 truncate';
+                statusTitle.textContent = 'Голос подзадран (нет 2-й форманты)';
+                statusSubtitle.className = 'text-xs sm:text-sm text-purple-100/90 line-clamp-2 leading-snug mt-0.5';
+                statusSubtitle.textContent = `Первая форманта есть, но ~${targetF2} Гц пропала. Слегка отпустите гортань и добавьте объём.`;
+            } else if (state === 'CONSTRICTED') {
+                statusCard.className = 'w-full rounded-2xl p-3.5 transition-all duration-300 border border-rose-500/60 bg-rose-950/50 backdrop-blur-md shadow-lg';
+                statusDot.className = 'w-4 h-4 rounded-full bg-rose-500 shrink-0 shadow-[0_0_14px_#f43f5e]';
+                statusTitle.className = 'text-base sm:text-lg font-extrabold tracking-tight text-rose-300 truncate';
+                statusTitle.textContent = 'Глотка критически задрана и задавлена';
+                statusSubtitle.className = 'text-xs sm:text-sm text-rose-100/90 line-clamp-2 leading-snug mt-0.5';
+                statusSubtitle.textContent = 'Слишком много плоского шума, чётких формант не видно. Расслабьте глотку и шепчите мягче.';
+            } else {
+                statusCard.className = 'w-full rounded-2xl p-3.5 transition-all duration-300 border border-slate-800 bg-slate-900/90 backdrop-blur-md shadow-lg';
+                statusDot.className = 'w-4 h-4 rounded-full bg-sky-400 shrink-0 shadow-[0_0_10px_#38bdf8]';
+                statusTitle.className = 'text-base sm:text-lg font-bold tracking-tight text-slate-200 truncate';
+                statusTitle.textContent = 'Слушаю ваш шёпот...';
+                statusSubtitle.className = 'text-xs sm:text-sm text-slate-400 line-clamp-2 leading-snug mt-0.5';
+                statusSubtitle.textContent = `Направьте поток шёпота так, чтобы зажглись оба пика: ~${targetF1} и ~${targetF2} Гц`;
+            }
+        }
+
+        // Главный цикл отрисовки интерактивного графика и истории формант
+        function processAudioLoop() {
+            if (!isRunning) return;
+
+            const sampleRate = audioCtx.sampleRate;
+            const analysis = analyzeWhisperSpectrum(sampleRate);
+            updateDiagnosisWithHysteresis(analysis.state);
+
+            // Обновляем цифровые индикаторы пиков
+            if (analysis.f1Match) {
+                peak1Val.textContent = `${analysis.f1Match.freq} Гц`;
+                peak1Badge.className = 'px-2.5 py-1 rounded-lg bg-sky-950/90 border border-sky-500/70 backdrop-blur text-xs font-semibold tabular-nums text-sky-200';
+            } else if (analysis.lowShiftedPeak) {
+                peak1Val.textContent = `${analysis.lowShiftedPeak.freq} Гц ↓`;
+                peak1Badge.className = 'px-2.5 py-1 rounded-lg bg-amber-950/90 border border-amber-500/70 backdrop-blur text-xs font-semibold tabular-nums text-amber-200';
+            } else {
+                peak1Val.textContent = '—';
+                peak1Badge.className = 'px-2.5 py-1 rounded-lg bg-slate-900/85 border border-slate-700/80 backdrop-blur text-xs font-semibold tabular-nums text-slate-400';
+            }
+
+            if (analysis.f2Match) {
+                peak2Val.textContent = `${analysis.f2Match.freq} Гц`;
+                peak2Badge.className = 'px-2.5 py-1 rounded-lg bg-emerald-950/90 border border-emerald-500/70 backdrop-blur text-xs font-semibold tabular-nums text-emerald-200';
+            } else {
+                peak2Val.textContent = '—';
+                peak2Badge.className = 'px-2.5 py-1 rounded-lg bg-slate-900/85 border border-slate-700/80 backdrop-blur text-xs font-semibold tabular-nums text-slate-400';
+            }
+
+            // Сохраняем срез в историю («водопад» в нижней части графика)
+            waterfallHistory.unshift({
+                state: analysis.state,
+                peaks: analysis.peaks.slice(0, 4),
+                f1Match: analysis.f1Match,
+                f2Match: analysis.f2Match
+            });
+            if (waterfallHistory.length > MAX_WATERFALL_ROWS) {
+                waterfallHistory.pop();
+            }
+
+            drawVisualizer(analysis, sampleRate);
+            requestAnimationFrame(processAudioLoop);
+        }
+
+        function drawVisualizer(analysis, sampleRate) {
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+
+            // Разделяем холст: верхние 66% — живой спектр и мишени, нижние 34% — лента времени
+            const specTop = 44;
+            const specBottom = Math.floor(height * 0.68);
+            const specHeight = specBottom - specTop;
+            const waterfallTop = specBottom + 24;
+            const waterfallHeight = height - waterfallTop - 8;
+
+            // 1. Вертикальная частотная сетка (1500 Гц .. 4000 Гц)
+            ctx.lineWidth = 1;
+            ctx.font = '600 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+
+            for (let f = 1500; f <= 4000; f += 500) {
+                const x = freqToX(f, width);
+                ctx.strokeStyle = f === 2000 ? 'rgba(251, 191, 36, 0.14)' : 'rgba(148, 163, 184, 0.08)';
+                ctx.beginPath();
+                ctx.moveTo(x, specTop);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
+                ctx.fillText(`${f} Гц`, x, specBottom + 15);
+            }
+
+            // 2. Зона «Перерасширение глотки» слева (~1800-2200 Гц) — предупреждающая подсветка при смещении
+            if (currentDiagnosis === 'OVEREXPANDED') {
+                const overX1 = freqToX(1750, width);
+                const overX2 = freqToX(targetF1 - TOLERANCE_HZ, width);
+                const gradOver = ctx.createLinearGradient(0, specTop, 0, specBottom);
+                gradOver.addColorStop(0, 'rgba(245, 158, 11, 0.18)');
+                gradOver.addColorStop(1, 'rgba(245, 158, 11, 0.03)');
+                ctx.fillStyle = gradOver;
+                ctx.fillRect(overX1, specTop, overX2 - overX1, specHeight);
+            }
+
+            // 3. Отрисовка двух целевых коридоров: Форманта 1 (~2461 Гц) и Форманта 2 (~3059 Гц)
+            drawTargetZone(
+                targetF1,
+                TOLERANCE_HZ,
+                'F1 Певческая',
+                !!analysis.f1Match,
+                '#38bdf8',
+                specTop,
+                specBottom,
+                waterfallTop,
+                height,
+                width
+            );
+
+            drawTargetZone(
+                targetF2,
+                TOLERANCE_HZ + 20,
+                'F2 Верхняя',
+                !!analysis.f2Match,
+                '#34d399',
+                specTop,
+                specBottom,
+                waterfallTop,
+                height,
+                width
+            );
+
+            // 4. Отрисовка кривой сглаженного спектра шёпота
+            const binHz = sampleRate / analyser.fftSize;
+            const minBin = Math.max(2, Math.floor(MIN_FREQ / binHz));
+            const maxBin = Math.min(analyser.frequencyBinCount - 3, Math.ceil(MAX_FREQ / binHz));
+
+            // Автоматическое масштабирование по вертикали относительно текущего уровня звука,
+            // чтобы форма пиков читалась при любой громкости шёпота
+            const refTopDb = Math.max(-52, analysis.maxDb + 5);
+            const refBottomDb = Math.min(-92, analysis.meanDb - 14);
+
+            function dbToY(db) {
+                const norm = (db - refBottomDb) / Math.max(18, (refTopDb - refBottomDb));
+                const clamped = Math.max(0, Math.min(1, norm));
+                return specBottom - clamped * (specHeight - 18);
+            }
+
+            // Пороговая линия шума (средний уровень спектра)
+            if (analysis.state !== 'SILENCE') {
+                const thresholdY = dbToY(analysis.meanDb + 2.2);
+                ctx.save();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = currentDiagnosis === 'CONSTRICTED'
+                    ? 'rgba(244, 63, 94, 0.55)'
+                    : 'rgba(148, 163, 184, 0.25)';
+                ctx.beginPath();
+                ctx.moveTo(0, thresholdY);
+                ctx.lineTo(width, thresholdY);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Цвет кривой спектра в зависимости от правильности вокальной позиции
+            let strokeColor = '#38bdf8';
+            let fillTopColor = 'rgba(56, 189, 248, 0.32)';
+            if (currentDiagnosis === 'GOOD') {
+                strokeColor = '#34d399';
+                fillTopColor = 'rgba(52, 211, 153, 0.36)';
+            } else if (currentDiagnosis === 'OVEREXPANDED') {
+                strokeColor = '#fbbf24';
+                fillTopColor = 'rgba(251, 191, 36, 0.30)';
+            } else if (currentDiagnosis === 'RAISED') {
+                strokeColor = '#c084fc';
+                fillTopColor = 'rgba(192, 132, 252, 0.30)';
+            } else if (currentDiagnosis === 'CONSTRICTED') {
+                strokeColor = '#fb7185';
+                fillTopColor = 'rgba(251, 113, 133, 0.30)';
+            }
+
+            // Строим сглаженный контур спектра
+            ctx.beginPath();
+            for (let i = minBin; i <= maxBin; i++) {
+                const freq = i * binHz;
+                const x = freqToX(freq, width);
+                const y = dbToY(smoothedEnvelope[i]);
+                if (i === minBin) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+
+            // Заливка под кривой
+            ctx.save();
+            ctx.lineTo(width, specBottom);
+            ctx.lineTo(0, specBottom);
+            ctx.closePath();
+            const curveGrad = ctx.createLinearGradient(0, specTop, 0, specBottom);
+            curveGrad.addColorStop(0, fillTopColor);
+            curveGrad.addColorStop(1, 'rgba(15, 23, 42, 0.0)');
+            ctx.fillStyle = curveGrad;
+            ctx.fill();
+            ctx.restore();
+
+            // Обводка кривой
+            ctx.beginPath();
+            for (let i = minBin; i <= maxBin; i++) {
+                const freq = i * binHz;
+                const x = freqToX(freq, width);
+                const y = dbToY(smoothedEnvelope[i]);
+                if (i === minBin) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            // 5. Подсветка найденных пиков (формант) прямо на вершинах графика
+            for (const p of analysis.peaks) {
+                const px = freqToX(p.freq, width);
+                const py = dbToY(p.db);
+                const isF1 = analysis.f1Match && analysis.f1Match.freq === p.freq;
+                const isF2 = analysis.f2Match && analysis.f2Match.freq === p.freq;
+
+                let dotColor = '#94a3b8';
+                if (isF1) dotColor = '#38bdf8';
+                else if (isF2) dotColor = '#34d399';
+                else if (p.freq < targetF1 - TOLERANCE_HZ + 40) dotColor = '#fbbf24';
+
+                // Свечение вокруг пика
+                ctx.beginPath();
+                ctx.arc(px, py, (isF1 || isF2) ? 9 : 6, 0, Math.PI * 2);
+                ctx.fillStyle = (isF1 || isF2) ? `${dotColor}44` : 'rgba(251, 191, 36, 0.25)';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(px, py, (isF1 || isF2) ? 5 : 4, 0, Math.PI * 2);
+                ctx.fillStyle = dotColor;
+                ctx.fill();
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#090d16';
+                ctx.stroke();
+
+                // Подпись частоты над пиком
+                ctx.font = '700 11px Inter, sans-serif';
+                ctx.fillStyle = (isF1 || isF2) ? '#ffffff' : '#fcd34d';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${p.freq}`, px, Math.max(specTop + 14, py - 10));
+            }
+
+            // 6. Наглядная графическая подсказка на самом графике при ошибке
+            if (currentDiagnosis === 'RAISED') {
+                // Показываем пустую мишень второй форманты (~3059 Гц)
+                const missingX = freqToX(targetF2, width);
+                const missingY = specTop + specHeight * 0.45;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(192, 132, 252, 0.85)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                ctx.arc(missingX, missingY, 14, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.font = '700 11px Inter, sans-serif';
+                ctx.fillStyle = '#e9d5ff';
+                ctx.textAlign = 'center';
+                ctx.fillText('Нет 2-й форманты!', missingX, missingY - 20);
+                ctx.restore();
+            } else if (currentDiagnosis === 'OVEREXPANDED' && analysis.lowShiftedPeak) {
+                // Рисуем стрелку вправо: от заниженного пика к целевой зоне
+                const fromX = freqToX(analysis.lowShiftedPeak.freq, width);
+                const toX = freqToX(targetF1, width);
+                const arrowY = specTop + specHeight * 0.35;
+                ctx.save();
+                ctx.strokeStyle = '#fbbf24';
+                ctx.fillStyle = '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(fromX + 10, arrowY);
+                ctx.lineTo(toX - 10, arrowY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(toX - 6, arrowY);
+                ctx.lineTo(toX - 14, arrowY - 5);
+                ctx.lineTo(toX - 14, arrowY + 5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.font = '700 11px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Слишком низко →', (fromX + toX) / 2, arrowY - 8);
+                ctx.restore();
+            }
+
+            // 7. Нижняя секция: История удержания двух формант во времени (Waterfall-трек)
+            drawWaterfallHistory(waterfallTop, waterfallHeight, width);
+        }
+
+        function drawTargetZone(centerFreq, tol, label, isHit, colorHex, specTop, specBottom, waterfallTop, totalHeight, width) {
+            const x1 = freqToX(centerFreq - tol, width);
+            const x2 = freqToX(centerFreq + tol, width);
+            const cx = freqToX(centerFreq, width);
+            const zoneW = x2 - x1;
+
+            // Заливка целевого коридора в области спектра
+            const grad = ctx.createLinearGradient(0, specTop, 0, specBottom);
+            if (isHit) {
+                grad.addColorStop(0, `${colorHex}38`);
+                grad.addColorStop(1, `${colorHex}08`);
+            } else {
+                grad.addColorStop(0, `${colorHex}14`);
+                grad.addColorStop(1, `${colorHex}04`);
+            }
+            ctx.fillStyle = grad;
+            ctx.fillRect(x1, specTop, zoneW, specBottom - specTop);
+
+            // Тонкий коридор в области водопада
+            ctx.fillStyle = isHit ? `${colorHex}16` : `${colorHex}08`;
+            ctx.fillRect(x1, waterfallTop, zoneW, totalHeight - waterfallTop - 8);
+
+            // Границы целевой зоны
+            ctx.strokeStyle = isHit ? `${colorHex}88` : `${colorHex}33`;
+            ctx.lineWidth = isHit ? 1.5 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x1, specTop);
+            ctx.lineTo(x1, specBottom);
+            ctx.moveTo(x2, specTop);
+            ctx.lineTo(x2, specBottom);
+            ctx.stroke();
+
+            // Центральная пунктирная ось целевой форманты
+            ctx.save();
+            ctx.setLineDash([3, 5]);
+            ctx.strokeStyle = isHit ? `${colorHex}aa` : `${colorHex}44`;
+            ctx.beginPath();
+            ctx.moveTo(cx, specTop + 18);
+            ctx.lineTo(cx, totalHeight - 8);
+            ctx.stroke();
+            ctx.restore();
+
+            // Плашка с названием и частотой зоны сверху
+            ctx.font = '700 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = isHit ? '#ffffff' : `${colorHex}cc`;
+            ctx.fillText(`${label} (~${centerFreq})`, cx, specTop + 12);
+        }
+
+        function drawWaterfallHistory(topY, h, width) {
+            if (h <= 10) return;
+
+            // Заголовок дорожки истории
+            ctx.font = '600 10px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.fillText('УДЕРЖАНИЕ ФОРМАНТ (ИСТОРИЯ)', 8, topY + 12);
+
+            const rowHeight = h / MAX_WATERFALL_ROWS;
+
+            for (let r = 0; r < waterfallHistory.length; r++) {
+                const item = waterfallHistory[r];
+                if (item.state === 'SILENCE') continue;
+
+                const y = topY + r * rowHeight;
+                const alpha = Math.max(0.12, 1 - r / MAX_WATERFALL_ROWS);
+
+                for (const p of item.peaks) {
+                    const x = freqToX(p.freq, width);
+                    const isF1 = item.f1Match && item.f1Match.freq === p.freq;
+                    const isF2 = item.f2Match && item.f2Match.freq === p.freq;
+
+                    if (isF1) {
+                        ctx.fillStyle = `rgba(56, 189, 248, ${alpha * 0.9})`;
+                        ctx.fillRect(x - 4, y, 8, Math.max(2, rowHeight + 0.8));
+                    } else if (isF2) {
+                        ctx.fillStyle = `rgba(52, 211, 153, ${alpha * 0.9})`;
+                        ctx.fillRect(x - 4, y, 8, Math.max(2, rowHeight + 0.8));
+                    } else {
+                        ctx.fillStyle = `rgba(251, 191, 36, ${alpha * 0.65})`;
+                        ctx.fillRect(x - 3, y, 6, Math.max(2, rowHeight));
+                    }
+                }
+            }
+        }
+
+        // Отрисовка фоновой сетки до включения микрофона
+        function drawIdleFrame() {
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+
+            const specTop = 44;
+            const specBottom = Math.floor(height * 0.68);
+            const waterfallTop = specBottom + 24;
+
+            drawTargetZone(targetF1, TOLERANCE_HZ, 'F1 Певческая', false, '#38bdf8', specTop, specBottom, waterfallTop, height, width);
+            drawTargetZone(targetF2, TOLERANCE_HZ + 20, 'F2 Верхняя', false, '#34d399', specTop, specBottom, waterfallTop, height, width);
+        }
+
+        window.addEventListener('load', () => {
+            resizeCanvas();
+        });
+    </script>
+</body>
+</html>
