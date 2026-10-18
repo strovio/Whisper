@@ -161,13 +161,15 @@
       const ABS_MIN_HZ = 300;
       const ABS_MAX_HZ = 5200;
 
-      // Range and spacing for detecting all vocal tract formants (F1, F2, F3, F4...)
+      // Range and spacing for detecting stable vocal tract formants
       const FORMANT_SEARCH_MIN_HZ = 380;
       const FORMANT_SEARCH_MAX_HZ = 4950;
-      const MIN_PEAK_SEPARATION_HZ = 260;
-      const TRACK_MATCH_RADIUS_HZ = 210;
+      const MIN_PEAK_SEPARATION_HZ = 310;
+      const TRACK_MATCH_RADIUS_HZ = 165;
+      const MAX_STABLE_DRIFT_HZ = 95;
+      const CONFIRM_STABLE_FRAMES = 12; // ~200ms of steady presence required before showing
 
-      // Dashed reference lines (initialized with default pair, updated to all active formants on calibration)
+      // Dashed reference lines (initialized with default pair, updated to stable formants on calibration)
       let refLines = [2461, 3059];
 
       // User-controlled frequency viewport (pan & span)
@@ -526,8 +528,8 @@
           const prominenceDb = val - Math.max(leftMin, rightMin);
           const ridgeVal = normalizedRidge[b];
 
-          // Accept any clear spectral hill without picking just two
-          if (ridgeVal < 0.24 && prominenceDb < 0.45) continue;
+          // Require both a clear local ridge and meaningful dB prominence
+          if (ridgeVal < 0.34 || prominenceDb < 0.65) continue;
 
           // Parabolic interpolation for sub-bin frequency accuracy
           const yL = smoothedEnvelope[Math.max(minAnBin, b - 1)];
@@ -558,7 +560,7 @@
         }
         selectedPeaks.sort((a, b) => a.freq - b.freq);
 
-        // 5. Update stateful multi-formant tracks (prevents jumping and flickering)
+        // 5. Update stateful multi-formant tracks with temporal persistence filtering
         const usedCandidate = new Array(selectedPeaks.length).fill(false);
 
         for (let t = 0; t < trackedFormants.length; t++) {
@@ -578,41 +580,66 @@
           if (bestIdx !== -1) {
             usedCandidate[bestIdx] = true;
             const match = selectedPeaks[bestIdx];
-            track.hz = track.hz * 0.72 + match.freq * 0.28;
-            track.prom = track.prom * 0.65 + match.prom * 0.35;
-            track.confidence = Math.min(1.0, track.confidence + 0.28);
+            const driftHz = Math.abs(match.freq - track.hz);
+
+            // Smoothly update frequency and prominence
+            track.hz = track.hz * 0.80 + match.freq * 0.20;
+            track.prom = track.prom * 0.72 + match.prom * 0.28;
             track.missedFrames = 0;
+
+            // Count frame as stable only if the peak isn't jumping erratically
+            if (driftHz <= MAX_STABLE_DRIFT_HZ) {
+              track.stableFrames = Math.min(CONFIRM_STABLE_FRAMES + 10, track.stableFrames + 1);
+            } else {
+              track.stableFrames = Math.max(1, track.stableFrames - 0.5);
+            }
+
+            if (track.stableFrames >= CONFIRM_STABLE_FRAMES) {
+              track.isConfirmed = true;
+            }
           } else {
             track.missedFrames += 1;
-            track.confidence *= 0.84;
+            track.stableFrames = Math.max(0, track.stableFrames - 1.5);
             track.prom *= 0.88;
+            if (track.missedFrames > 6 || track.stableFrames < 4) {
+              track.isConfirmed = false;
+            }
+          }
+
+          // Smooth fade-in and fade-out for confirmed stable formants
+          if (track.isConfirmed && track.missedFrames <= 3) {
+            track.displayAlpha = Math.min(1.0, (track.displayAlpha || 0) + 0.16);
+          } else {
+            track.displayAlpha = Math.max(0.0, (track.displayAlpha || 0) - 0.14);
           }
         }
 
-        // Spawn tracks for newly appeared formants
+        // Spawn probationary tracks for newly appeared peaks (hidden until proven stable)
         for (let c = 0; c < selectedPeaks.length; c++) {
           if (usedCandidate[c]) continue;
           const cand = selectedPeaks[c];
-          if (cand.prom >= 0.30) {
+          if (cand.prom >= 0.38) {
             trackedFormants.push({
               id: nextTrackId++,
               hz: cand.freq,
               prom: cand.prom,
-              confidence: 0.45,
-              missedFrames: 0
+              stableFrames: 1,
+              missedFrames: 0,
+              isConfirmed: false,
+              displayAlpha: 0
             });
           }
         }
 
         // Prune expired tracks and merge tracks that drifted too close together
         trackedFormants = trackedFormants.filter(
-          (t) => t.missedFrames <= 10 && t.confidence >= 0.22
+          (t) => t.missedFrames <= 8 && (t.stableFrames > 0 || t.displayAlpha > 0.05)
         );
         trackedFormants.sort((a, b) => a.hz - b.hz);
 
         for (let i = trackedFormants.length - 1; i > 0; i--) {
-          if (Math.abs(trackedFormants[i].hz - trackedFormants[i - 1].hz) < MIN_PEAK_SEPARATION_HZ * 0.75) {
-            if (trackedFormants[i].confidence > trackedFormants[i - 1].confidence) {
+          if (Math.abs(trackedFormants[i].hz - trackedFormants[i - 1].hz) < MIN_PEAK_SEPARATION_HZ * 0.8) {
+            if (trackedFormants[i].stableFrames >= trackedFormants[i - 1].stableFrames) {
               trackedFormants.splice(i - 1, 1);
             } else {
               trackedFormants.splice(i, 1);
@@ -620,17 +647,17 @@
           }
         }
 
-        // 6. While holding the calibration button, lock dashed reference lines to visible active formants
+        // 6. While holding the calibration button, lock dashed reference lines to confirmed stable formants
         if (isCalibratingHold) {
           const activeInView = trackedFormants.filter(
-            (t) => t.confidence >= 0.45 && t.hz >= displayMinHz && t.hz <= displayMaxHz
+            (t) => t.isConfirmed && t.displayAlpha >= 0.5 && t.hz >= displayMinHz && t.hz <= displayMaxHz
           );
           if (activeInView.length > 0) {
             if (refLines.length !== activeInView.length) {
               refLines = activeInView.map((t) => t.hz);
             } else {
               for (let i = 0; i < activeInView.length; i++) {
-                refLines[i] = refLines[i] * 0.8 + activeInView[i].hz * 0.2;
+                refLines[i] = refLines[i] * 0.82 + activeInView[i].hz * 0.18;
               }
             }
           }
@@ -797,11 +824,11 @@
           }
         }
 
-        // 5. Draw ALL active formant peak markers & Hz labels in the top strip
+        // 5. Draw ONLY confirmed stable formant peak markers & Hz labels in the top strip
         const visiblePeaks = [];
         for (let i = 0; i < trackedFormants.length; i++) {
           const track = trackedFormants[i];
-          if (track.confidence < 0.38) continue;
+          if (!track.isConfirmed && track.displayAlpha <= 0.08) continue;
           const px = freqToX(track.hz, w);
           if (px < 8 || px > w - 8) continue;
 
@@ -817,7 +844,7 @@
             label,
             boxW,
             labelCenterX: Math.max(boxW * 0.5 + 3, Math.min(w - boxW * 0.5 - 3, px)),
-            alpha: Math.min(1, track.confidence)
+            alpha: Math.min(1, track.displayAlpha)
           });
         }
 
