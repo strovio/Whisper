@@ -11,7 +11,6 @@
   <style>
     :root {
       --bg-deep: #070b14;
-      --center-color: #10b981;
     }
 
     * {
@@ -36,16 +35,6 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Subtle ambient glow that reacts when both formants are locked */
-    #app-shell {
-      transition: box-shadow 0.35s ease, border-color 0.35s ease;
-      box-shadow: inset 0 0 0px rgba(16, 185, 129, 0);
-    }
-
-    #app-shell.praise-active {
-      box-shadow: inset 0 0 65px rgba(16, 185, 129, 0.28), inset 0 0 22px rgba(251, 191, 36, 0.2);
-    }
-
     @keyframes pulse-ring {
       0% { transform: scale(0.95); opacity: 0.7; }
       50% { transform: scale(1.06); opacity: 0.3; }
@@ -56,114 +45,90 @@
       animation: pulse-ring 2.4s infinite ease-in-out;
     }
 
+    #visualizer-canvas {
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #visualizer-canvas:active {
+      cursor: grabbing;
+    }
+
     #calibrate-hold-btn {
       touch-action: none;
     }
 
     #calibrate-hold-btn.calibrating-active {
-      background: linear-gradient(90deg, rgba(6, 182, 212, 0.35), rgba(16, 185, 129, 0.45));
-      border-color: #22d3ee;
-      box-shadow: 0 0 25px rgba(34, 211, 238, 0.45);
+      background: rgba(251, 191, 36, 0.22);
+      border-color: #fbbf24;
+      color: #fde68a;
       transform: scale(0.985);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 999px;
+      background: #1e293b;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #0f172a;
+      margin-top: -6px;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
     }
   </style>
 </head>
 <body class="w-full h-full flex flex-col justify-between relative">
 
-  <!-- Main interactive wrapper -->
-  <div id="app-shell" class="w-full h-full flex flex-col justify-between p-2.5 sm:p-4 relative z-10">
+  <div id="app-shell" class="w-full h-full flex flex-col justify-between p-2 sm:p-3.5 relative z-10 gap-2">
 
-    <!-- Top Feedback & Praise Banner -->
-    <header class="w-full flex flex-col gap-2 shrink-0">
-      <div id="praise-card" class="w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-3.5 py-2.5 flex items-center justify-between transition-all duration-300 shadow-lg">
-        <div class="flex items-center gap-3 min-w-0">
-          <!-- Status Orb -->
-          <div id="status-orb" class="w-4 h-4 rounded-full bg-emerald-400 shrink-0 transition-all duration-300"></div>
-          <div class="truncate">
-            <div id="praise-title" class="text-sm sm:text-lg font-bold tracking-tight text-slate-200 truncate">
-              Ожидание микрофона
-            </div>
-            <div id="praise-subtitle" class="text-xs sm:text-sm text-slate-400 truncate">
-              Зажмите кнопку внизу и прошепчите «У» для подстройки экрана
-            </div>
-          </div>
-        </div>
-
-        <!-- Continuity / Stability Score Badge -->
-        <div id="streak-badge" class="flex flex-col items-end shrink-0 pl-2">
-          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Близость к «У»</span>
-          <span id="hold-timer" class="mono text-sm font-bold text-emerald-400">100%</span>
-        </div>
+    <!-- Minimalist Navigation & Scale Bar -->
+    <header class="w-full rounded-xl bg-slate-900/90 border border-slate-800/90 px-3 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div class="flex items-center gap-3 flex-1 min-w-[200px]">
+        <span class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Позиция (Гц):</span>
+        <input id="pan-slider" type="range" min="400" max="3200" step="10" value="1150" class="w-full" />
+        <span id="range-label" class="mono text-[11px] text-slate-300 whitespace-nowrap">1150–3950 Гц</span>
       </div>
 
-      <!-- Live Formant Position & Left Slot Space Diagnostics Pills -->
-      <div class="grid grid-cols-3 gap-1.5 sm:gap-2 w-full">
-        <!-- Left Reserve Space / Overall Balance Pill -->
-        <div id="pill-spread" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Слот слева / Δ</span>
-            <span id="left-slot-hz" class="mono text-[10px] font-medium text-slate-500">резерв</span>
-          </div>
-          <span id="val-spread" class="mono text-xs sm:text-sm font-bold text-slate-300 mt-0.5">Стабильно</span>
-        </div>
-
-        <!-- Formant 1 Position Pill (Middle-Right Slot) -->
-        <div id="pill-f1" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-300">1-я (Правее центра)</span>
-            <span id="drift-f1" class="mono text-[10px] font-bold text-emerald-400">0 Гц</span>
-          </div>
-          <span id="val-f1" class="mono text-xs sm:text-sm font-bold text-slate-200 mt-0.5">— Гц</span>
-        </div>
-
-        <!-- Formant 2 Position Pill (Far-Right Slot) -->
-        <div id="pill-f2" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-300">2-я (Крайняя правая)</span>
-            <span id="drift-f2" class="mono text-[10px] font-bold text-emerald-400">0 Гц</span>
-          </div>
-          <span id="val-f2" class="mono text-xs sm:text-sm font-bold text-slate-200 mt-0.5">— Гц</span>
-        </div>
+      <div class="flex items-center gap-2.5 w-full sm:w-auto sm:min-w-[190px]">
+        <span class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Масштаб:</span>
+        <input id="zoom-slider" type="range" min="1400" max="4000" step="50" value="2800" class="w-full sm:w-28" />
+        <span class="text-[10px] text-slate-500 hidden sm:inline whitespace-nowrap">Можно двигать график пальцем</span>
       </div>
     </header>
 
-    <!-- Center Interactive Waterfall Container -->
-    <main class="w-full flex-1 my-2 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800/90 shadow-inner flex flex-col">
+    <main class="w-full flex-1 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800/90 shadow-inner flex flex-col">
       <canvas id="visualizer-canvas" class="w-full h-full block"></canvas>
 
-      <!-- Floating Press-and-Hold Calibration Button (visible after mic starts) -->
+      <!-- Floating Press-and-Hold Calibration Button -->
       <div id="controls-bar" class="hidden absolute bottom-3 left-3 right-3 flex items-center justify-center pointer-events-none">
         <button id="calibrate-hold-btn" type="button"
-          class="pointer-events-auto w-full sm:w-auto sm:min-w-[340px] py-3 px-5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-emerald-500/50 text-emerald-300 font-bold text-xs sm:text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer">
-          <span id="calib-btn-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]"></span>
-          <span id="calib-btn-text">УДЕРЖИВАЙТЕ И ШЕПЧИТЕ «У» ДЛЯ КАЛИБРОВКИ</span>
+          class="pointer-events-auto w-full sm:w-auto sm:min-w-[320px] py-3 px-5 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700 text-slate-200 font-semibold text-xs sm:text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer">
+          <span id="calib-btn-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span id="calib-btn-text">УДЕРЖИВАЙТЕ ДЛЯ КАЛИБРОВКИ ПУНКТИРНЫХ ЛИНИЙ</span>
         </button>
       </div>
     </main>
 
-    <!-- Minimalist Continuous Color Legend Footer -->
-    <footer class="w-full flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 px-1 shrink-0">
-      <div class="flex items-center gap-3 flex-wrap w-full justify-between sm:justify-start">
-        <span class="inline-flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-cyan-400"></span>← Ушла влево (ниже)
-        </span>
-        <span class="inline-flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]"></span>В центре «У»
-        </span>
-        <span class="inline-flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-400 to-rose-500"></span>Ушла вправо (выше) →
-        </span>
-      </div>
-      <span class="text-[10px] text-slate-500 hidden md:inline shrink-0">Максимальная чувствительность без порога тишины</span>
-    </footer>
-
-    <!-- Initial One-Button Microphone Start Overlay -->
     <div id="start-overlay" class="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
       <div class="max-w-sm w-full flex flex-col items-center">
         <div class="relative mb-6 flex items-center justify-center">
-          <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-500/20 to-amber-500/20 mic-pulse absolute"></div>
+          <div class="w-24 h-24 rounded-full bg-sky-500/15 mic-pulse absolute"></div>
           <button id="start-mic-btn" type="button"
-            class="relative z-10 w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 via-teal-400 to-emerald-500 text-slate-950 shadow-xl shadow-cyan-500/25 flex items-center justify-center active:scale-95 transition-transform duration-150 cursor-pointer">
+            class="relative z-10 w-20 h-20 rounded-full bg-sky-400 text-slate-950 shadow-xl shadow-sky-500/20 flex items-center justify-center active:scale-95 transition-transform duration-150 cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -172,17 +137,16 @@
           </button>
         </div>
 
-        <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight mb-2">
-          Водопад Whisper Chiaroscuro
+        <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight mb-2">
+          Формантный водопад
         </h1>
         <p class="text-sm text-slate-300 leading-relaxed mb-6">
-          1. Работает без порога громкости — <strong>чем тише шёпот, тем лучше</strong>.<br/>
-          2. <strong>Зажмите кнопку калибровки</strong> и прошепчите «У» — экран сам подстроится и выставит два эталона в правой части, оставив слева место под ещё один паз.<br/>
-          3. Отпустите кнопку: линии плавно меняют цвет от <strong>зелёного</strong> (в эталоне) к <strong>сине-фиолетовому</strong> (смещение влево) или <strong>жёлто-алому</strong> (смещение вправо).
+          Чистая спектрограмма шёпота без порога громкости.<br/>
+          Перетаскивайте график пальцем влево-вправо или ползунком, а для установки двух пунктирных ориентиров зажмите кнопку калибровки.
         </p>
 
         <button id="start-mic-text-btn" type="button"
-          class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-bold text-base shadow-lg shadow-emerald-500/20 active:scale-98 transition cursor-pointer">
+          class="w-full py-3.5 px-6 rounded-xl bg-sky-400 text-slate-950 font-bold text-base shadow-lg shadow-sky-500/20 active:scale-98 transition cursor-pointer">
           Включить микрофон
         </button>
 
@@ -194,57 +158,37 @@
 
   <script>
     (function () {
-      // Absolute search bounds for the two high whisper formants
-      const SEARCH_MIN_HZ = 1650;
-      const SEARCH_MAX_HZ = 4200;
-      const MIN_PEAK_SEPARATION_HZ = 290;
-      const MAX_PEAK_SEPARATION_HZ = 1400;
+      const ABS_MIN_HZ = 300;
+      const ABS_MAX_HZ = 5200;
 
-      // Screen layout ratios:
-      // Place both active "У" slots in the right part of the screen (58% and 85% of width),
-      // leaving the left part (~31% of width) open as space for a third lower slot.
-      const SLOT_F1_X_RATIO = 0.58;
-      const SLOT_F2_X_RATIO = 0.85;
-      const GHOST_SLOT_X_RATIO = SLOT_F1_X_RATIO - (SLOT_F2_X_RATIO - SLOT_F1_X_RATIO); // ~0.31
+      // Search range for calibration & live formant peak labels
+      const FORMANT_SEARCH_MIN_HZ = 1550;
+      const FORMANT_SEARCH_MAX_HZ = 4300;
+      const MIN_PEAK_SEPARATION_HZ = 280;
+      const MAX_PEAK_SEPARATION_HZ = 1450;
 
-      // Default starting anchors (around ~2461 Hz and ~3059 Hz)
-      const DEFAULT_REF_F1 = 2461;
-      const DEFAULT_REF_F2 = 3059;
+      // Two dashed reference lines (calibrated via hold button)
+      let refF1 = 2461;
+      let refF2 = 3059;
 
-      let refF1 = DEFAULT_REF_F1;
-      let refF2 = DEFAULT_REF_F2;
+      // User-controlled frequency viewport (pan & span)
+      let displayMinHz = 1150;
+      let displaySpanHz = 2800;
+      let displayMaxHz = displayMinHz + displaySpanHz;
 
-      // Compute display frequency window so refF1 sits at SLOT_F1_X_RATIO and refF2 sits at SLOT_F2_X_RATIO
-      function computeWindowForRefs(f1, f2) {
-        const spread = Math.max(360, f2 - f1);
-        const totalSpan = spread / (SLOT_F2_X_RATIO - SLOT_F1_X_RATIO);
-        const minHz = Math.max(700, f1 - SLOT_F1_X_RATIO * totalSpan);
-        const maxHz = minHz + totalSpan;
-        return { minHz, maxHz };
-      }
-
-      const initialWin = computeWindowForRefs(refF1, refF2);
-      let displayMinHz = initialWin.minHz;
-      let displayMaxHz = initialWin.maxHz;
-      let targetDisplayMinHz = initialWin.minHz;
-      let targetDisplayMaxHz = initialWin.maxHz;
-
-      // Press-and-hold calibration state
       let isCalibratingHold = false;
-      let hasUserCalibrated = false;
 
-      // Real-time smoothed detected formant positions (always active, no silence gate)
-      let smoothPeak1Hz = DEFAULT_REF_F1;
-      let smoothPeak2Hz = DEFAULT_REF_F2;
+      // Smoothed live formant peak frequencies for top-of-graph readout
+      let liveF1Hz = 2461;
+      let liveF2Hz = 3059;
+      let liveF1Prominence = 0;
+      let liveF2Prominence = 0;
 
-      // Continuous alignment score (0..1)
-      let smoothAlignmentScore = 1.0;
-      let lastFrameTime = performance.now();
-
-      // Waterfall history of formant center tracks
+      // Waterfall configuration and history buffer (for sharp redrawing on finger drag)
       const WATERFALL_SPEED_PX = 2;
-      const TOP_SOCKET_BAR_HEIGHT = 64;
-      let trackHistory = [];
+      const TOP_HEADER_HEIGHT = 82;
+      const MAX_HISTORY_ROWS = 600;
+      let ridgeHistory = [];
 
       // Audio Web API objects
       let audioCtx = null;
@@ -254,8 +198,8 @@
       let temporalSpectrum = null;
       let normalizedRidge = null;
       let isRunning = false;
+      let needsFullWaterfallRedraw = false;
 
-      const appShell = document.getElementById('app-shell');
       const startOverlay = document.getElementById('start-overlay');
       const startMicBtn = document.getElementById('start-mic-btn');
       const startMicTextBtn = document.getElementById('start-mic-text-btn');
@@ -265,81 +209,150 @@
       const calibBtnDot = document.getElementById('calib-btn-dot');
       const calibBtnText = document.getElementById('calib-btn-text');
 
-      const praiseCard = document.getElementById('praise-card');
-      const statusOrb = document.getElementById('status-orb');
-      const praiseTitle = document.getElementById('praise-title');
-      const praiseSubtitle = document.getElementById('praise-subtitle');
-      const holdTimerEl = document.getElementById('hold-timer');
-
-      const pillF1 = document.getElementById('pill-f1');
-      const pillF2 = document.getElementById('pill-f2');
-      const pillSpread = document.getElementById('pill-spread');
-      const valF1 = document.getElementById('val-f1');
-      const valF2 = document.getElementById('val-f2');
-      const valSpread = document.getElementById('val-spread');
-      const leftSlotHz = document.getElementById('left-slot-hz');
-      const driftF1 = document.getElementById('drift-f1');
-      const driftF2 = document.getElementById('drift-f2');
+      const panSlider = document.getElementById('pan-slider');
+      const zoomSlider = document.getElementById('zoom-slider');
+      const rangeLabel = document.getElementById('range-label');
 
       const canvas = document.getElementById('visualizer-canvas');
       const ctx = canvas.getContext('2d');
 
-      // Offscreen bitmap buffers for smooth scrolling & dynamic horizontal rescaling
       const waterfallCanvas = document.createElement('canvas');
       const waterfallCtx = waterfallCanvas.getContext('2d');
-      const tempSwapCanvas = document.createElement('canvas');
-      const tempSwapCtx = tempSwapCanvas.getContext('2d');
 
       let canvasWidth = 320;
       let canvasHeight = 460;
-      let waterfallHeight = 396;
+      let waterfallHeight = 378;
       let dpr = window.devicePixelRatio || 1;
+
+      // Precompute 256-level clean spectrogram colormap (only depends on intensity)
+      // Deep navy -> Slate blue -> Cyan -> Warm ivory
+      const colorLUT = new Uint8Array(256 * 3);
+      (function buildColormap() {
+        const stops = [
+          { pos: 0.00, rgb: [5, 8, 17] },
+          { pos: 0.25, rgb: [15, 32, 67] },
+          { pos: 0.55, rgb: [14, 116, 144] },
+          { pos: 0.80, rgb: [56, 189, 248] },
+          { pos: 1.00, rgb: [248, 250, 252] }
+        ];
+        for (let i = 0; i < 256; i++) {
+          const t = i / 255;
+          let s0 = stops[0];
+          let s1 = stops[stops.length - 1];
+          for (let j = 0; j < stops.length - 1; j++) {
+            if (t >= stops[j].pos && t <= stops[j + 1].pos) {
+              s0 = stops[j];
+              s1 = stops[j + 1];
+              break;
+            }
+          }
+          const localT = s1.pos === s0.pos ? 0 : (t - s0.pos) / (s1.pos - s0.pos);
+          colorLUT[i * 3] = Math.round(s0.rgb[0] + (s1.rgb[0] - s0.rgb[0]) * localT);
+          colorLUT[i * 3 + 1] = Math.round(s0.rgb[1] + (s1.rgb[1] - s0.rgb[1]) * localT);
+          colorLUT[i * 3 + 2] = Math.round(s0.rgb[2] + (s1.rgb[2] - s0.rgb[2]) * localT);
+        }
+      })();
+
+      function updateViewportBounds(newMinHz, newSpanHz) {
+        displaySpanHz = Math.max(1000, Math.min(4200, newSpanHz));
+        const maxAllowedMin = Math.max(ABS_MIN_HZ, ABS_MAX_HZ - displaySpanHz);
+        displayMinHz = Math.max(ABS_MIN_HZ, Math.min(maxAllowedMin, newMinHz));
+        displayMaxHz = displayMinHz + displaySpanHz;
+
+        panSlider.max = String(Math.round(maxAllowedMin));
+        panSlider.value = String(Math.round(displayMinHz));
+        zoomSlider.value = String(Math.round(displaySpanHz));
+        rangeLabel.textContent = `${Math.round(displayMinHz)}–${Math.round(displayMaxHz)} Гц`;
+        needsFullWaterfallRedraw = true;
+      }
+
+      panSlider.addEventListener('input', () => {
+        updateViewportBounds(Number(panSlider.value), displaySpanHz);
+      });
+
+      zoomSlider.addEventListener('input', () => {
+        const centerHz = displayMinHz + displaySpanHz * 0.5;
+        const nextSpan = Number(zoomSlider.value);
+        updateViewportBounds(centerHz - nextSpan * 0.5, nextSpan);
+      });
+
+      // Horizontal drag-to-pan on canvas
+      let isDraggingCanvas = false;
+      let dragStartX = 0;
+      let dragStartMinHz = 0;
+
+      canvas.addEventListener('pointerdown', (e) => {
+        isDraggingCanvas = true;
+        dragStartX = e.clientX;
+        dragStartMinHz = displayMinHz;
+        if (canvas.setPointerCapture) {
+          try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!isDraggingCanvas) return;
+        const dx = e.clientX - dragStartX;
+        const hzPerPx = displaySpanHz / Math.max(1, canvasWidth);
+        updateViewportBounds(dragStartMinHz - dx * hzPerPx, displaySpanHz);
+      });
+
+      function stopCanvasDrag() {
+        isDraggingCanvas = false;
+      }
+      window.addEventListener('pointerup', stopCanvasDrag);
+      window.addEventListener('pointercancel', stopCanvasDrag);
+
+      // Mouse wheel zoom/pan support
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+          const hzShift = (e.deltaX / canvasWidth) * displaySpanHz;
+          updateViewportBounds(displayMinHz + hzShift, displaySpanHz);
+        } else {
+          const factor = e.deltaY > 0 ? 1.08 : 0.92;
+          const centerHz = displayMinHz + displaySpanHz * 0.5;
+          const nextSpan = Math.max(1200, Math.min(4000, displaySpanHz * factor));
+          updateViewportBounds(centerHz - nextSpan * 0.5, nextSpan);
+        }
+      }, { passive: false });
 
       function resizeCanvas() {
         dpr = Math.min(window.devicePixelRatio || 1, 2.0);
         const rect = canvas.getBoundingClientRect();
         canvasWidth = Math.max(240, Math.floor(rect.width));
         canvasHeight = Math.max(240, Math.floor(rect.height));
-        waterfallHeight = Math.max(120, canvasHeight - TOP_SOCKET_BAR_HEIGHT);
+        waterfallHeight = Math.max(120, canvasHeight - TOP_HEADER_HEIGHT);
 
         canvas.width = Math.round(canvasWidth * dpr);
         canvas.height = Math.round(canvasHeight * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        tempSwapCanvas.width = waterfallCanvas.width || canvasWidth;
-        tempSwapCanvas.height = waterfallCanvas.height || waterfallHeight;
-        tempSwapCtx.drawImage(waterfallCanvas, 0, 0);
-
         waterfallCanvas.width = canvasWidth;
         waterfallCanvas.height = waterfallHeight;
-        waterfallCtx.fillStyle = '#050811';
-        waterfallCtx.fillRect(0, 0, canvasWidth, waterfallHeight);
-        waterfallCtx.drawImage(tempSwapCanvas, 0, 0, canvasWidth, waterfallHeight);
-
-        tempSwapCanvas.width = canvasWidth;
-        tempSwapCanvas.height = waterfallHeight;
+        needsFullWaterfallRedraw = true;
       }
 
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
+      updateViewportBounds(displayMinHz, displaySpanHz);
 
       function beginHoldCalibration(e) {
         if (e && e.cancelable) e.preventDefault();
         if (!isRunning) return;
         isCalibratingHold = true;
         calibrateHoldBtn.classList.add('calibrating-active');
-        calibBtnDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-300 animate-ping';
-        calibBtnText.textContent = 'КАЛИБРОВКА «У»... ОТПУСТИТЕ ДЛЯ ФИКСАЦИИ';
+        calibBtnDot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-ping';
+        calibBtnText.textContent = 'ФИКСАЦИЯ ЛИНИЙ ПО ШЁПОТУ... ОТПУСТИТЕ ДЛЯ ГОТОВНОСТИ';
       }
 
       function endHoldCalibration(e) {
         if (!isCalibratingHold) return;
         if (e && e.cancelable) e.preventDefault();
         isCalibratingHold = false;
-        hasUserCalibrated = true;
         calibrateHoldBtn.classList.remove('calibrating-active');
-        calibBtnDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]';
-        calibBtnText.textContent = 'УДЕРЖИВАЙТЕ И ШЕПЧИТЕ «У» ДЛЯ КАЛИБРОВКИ';
+        calibBtnDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        calibBtnText.textContent = 'УДЕРЖИВАЙТЕ ДЛЯ КАЛИБРОВКИ ПУНКТИРНЫХ ЛИНИЙ';
       }
 
       calibrateHoldBtn.addEventListener('pointerdown', beginHoldCalibration);
@@ -374,7 +387,7 @@
           const source = audioCtx.createMediaStreamSource(stream);
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 4096;
-          analyser.smoothingTimeConstant = 0.58;
+          analyser.smoothingTimeConstant = 0.55;
 
           source.connect(analyser);
 
@@ -390,7 +403,6 @@
           resizeCanvas();
 
           isRunning = true;
-          lastFrameTime = performance.now();
           requestAnimationFrame(animateLoop);
         } catch (err) {
           micErrorBox.textContent =
@@ -417,22 +429,21 @@
         const sampleRate = audioCtx.sampleRate || 48000;
         const binCount = analyser.frequencyBinCount;
 
-        // Analyze across full possible display range so rescaling never clips
-        const minAnBin = freqToBin(Math.min(700, displayMinHz - 200), sampleRate, binCount);
-        const maxAnBin = freqToBin(Math.max(4500, displayMaxHz + 200), sampleRate, binCount);
+        const minAnBin = freqToBin(ABS_MIN_HZ, sampleRate, binCount);
+        const maxAnBin = freqToBin(ABS_MAX_HZ, sampleRate, binCount);
 
-        // 1. Temporal smoothing + high-frequency tilt compensation
+        // 1. Temporal smoothing + gentle high-frequency pre-emphasis for whisper
         for (let b = minAnBin; b <= maxAnBin; b++) {
           let val = rawFreqData[b];
           if (!Number.isFinite(val) || val < -140) val = -140;
           const freq = binToFreq(b, sampleRate, binCount);
-          const preEmphasisDb = Math.max(0, (freq - 1200) / 1000) * 3.6;
+          const preEmphasisDb = Math.max(0, (freq - 1000) / 1000) * 3.4;
           const boosted = val + preEmphasisDb;
-          temporalSpectrum[b] = temporalSpectrum[b] * 0.55 + boosted * 0.45;
+          temporalSpectrum[b] = temporalSpectrum[b] * 0.52 + boosted * 0.48;
         }
 
-        // 2. Smooth spectral envelope across ~150 Hz to reveal formant hills even on ultra-quiet whisper
-        const halfWindowBins = Math.max(4, Math.round(75 / (sampleRate / (binCount * 2))));
+        // 2. Smooth spectral envelope (~140 Hz window) to highlight formant hills
+        const halfWindowBins = Math.max(4, Math.round(70 / (sampleRate / (binCount * 2))));
         let sumEnv = 0;
         let countEnv = 0;
         let maxEnvDb = -160;
@@ -457,8 +468,7 @@
 
         const meanEnvDb = countEnv > 0 ? sumEnv / countEnv : -110;
 
-        // 3. Zero-Threshold Local Ridge Normalization (0..1)
-        // Completely independent of absolute volume: even microscopic whisper ripples are normalized to [0..1]
+        // 3. Zero-threshold local ridge normalization (0..1)
         const spanRadius = Math.max(12, Math.round(310 / (sampleRate / (binCount * 2))));
         const globalSpan = Math.max(0.4, maxEnvDb - meanEnvDb);
 
@@ -477,9 +487,18 @@
           normalizedRidge[b] = Math.pow(localNorm * 0.75 + globalNorm * 0.25, 1.55);
         }
 
-        // 4. Find the two formant peaks in the whisper region without any silence gate
-        const searchStartBin = freqToBin(SEARCH_MIN_HZ, sampleRate, binCount);
-        const searchEndBin = freqToBin(SEARCH_MAX_HZ, sampleRate, binCount);
+        // Save compact copy of normalized ridge into history buffer for crisp panning
+        const rowCopy = new Uint8Array(maxAnBin + 1);
+        for (let b = minAnBin; b <= maxAnBin; b++) {
+          rowCopy[b] = Math.min(255, Math.max(0, Math.round(normalizedRidge[b] * 255)));
+        }
+        ridgeHistory.unshift(rowCopy);
+        if (ridgeHistory.length > MAX_HISTORY_ROWS) {
+          ridgeHistory.pop();
+        }
+
+        const searchStartBin = freqToBin(FORMANT_SEARCH_MIN_HZ, sampleRate, binCount);
+        const searchEndBin = freqToBin(FORMANT_SEARCH_MAX_HZ, sampleRate, binCount);
         const candidates = [];
 
         const neighborCheck = Math.max(2, Math.round(45 / (sampleRate / (binCount * 2))));
@@ -527,25 +546,22 @@
             const sep = p2.freq - p1.freq;
 
             if (sep < MIN_PEAK_SEPARATION_HZ || sep > MAX_PEAK_SEPARATION_HZ) continue;
-            if (p1.freq > 3250 || p2.freq < 2300) continue;
+            if (p1.freq > 3300 || p2.freq < 2200) continue;
 
             let valleyDb = Math.min(p1.db, p2.db);
             for (let b = p1.bin + 1; b < p2.bin; b++) {
               if (smoothedEnvelope[b] < valleyDb) valleyDb = smoothedEnvelope[b];
             }
             const dipDepth = Math.max(0, Math.min(p1.db, p2.db) - valleyDb);
-            const balanceDiff = Math.abs(p1.db - p2.db);
-
-            const contDist = Math.abs(p1.freq - smoothPeak1Hz) + Math.abs(p2.freq - smoothPeak2Hz);
-            const continuityBonus = Math.max(0, 5.0 - contDist / 240);
+            const contDist = Math.abs(p1.freq - liveF1Hz) + Math.abs(p2.freq - liveF2Hz);
+            const continuityBonus = Math.max(0, 4.5 - contDist / 260);
 
             const score =
               p1.prominence * 2.2 +
               p2.prominence * 2.2 +
-              p1.heightAboveMean * 1.2 +
-              p2.heightAboveMean * 1.2 +
-              dipDepth * 2.4 -
-              balanceDiff * 0.2 +
+              p1.heightAboveMean * 1.1 +
+              p2.heightAboveMean * 1.1 +
+              dipDepth * 2.2 +
               continuityBonus;
 
             if (score > bestPairScore) {
@@ -556,226 +572,16 @@
         }
 
         if (bestPair) {
-          return { peak1: bestPair.p1, peak2: bestPair.p2 };
+          liveF1Hz = liveF1Hz * 0.68 + bestPair.p1.freq * 0.32;
+          liveF2Hz = liveF2Hz * 0.68 + bestPair.p2.freq * 0.32;
+          liveF1Prominence = normalizedRidge[bestPair.p1.bin];
+          liveF2Prominence = normalizedRidge[bestPair.p2.bin];
         }
 
-        // Fallback if only one local peak was found: pick highest ridge in lower & upper sub-bands
-        const midSplitHz = (refF1 + refF2) * 0.5;
-        const midBin = freqToBin(midSplitHz, sampleRate, binCount);
-
-        let bestLowBin = searchStartBin;
-        let bestLowVal = -Infinity;
-        for (let b = searchStartBin; b <= midBin; b++) {
-          if (normalizedRidge[b] > bestLowVal) {
-            bestLowVal = normalizedRidge[b];
-            bestLowBin = b;
-          }
-        }
-
-        let bestHighBin = Math.min(searchEndBin, midBin + 1);
-        let bestHighVal = -Infinity;
-        for (let b = bestHighBin; b <= searchEndBin; b++) {
-          if (normalizedRidge[b] > bestHighVal) {
-            bestHighVal = normalizedRidge[b];
-            bestHighBin = b;
-          }
-        }
-
-        return {
-          peak1: { freq: binToFreq(bestLowBin, sampleRate, binCount) },
-          peak2: { freq: binToFreq(bestHighBin, sampleRate, binCount) }
-        };
-      }
-
-      function lerp(a, b, t) {
-        return a + (b - a) * t;
-      }
-
-      function lerpRGB(c1, c2, t) {
-        const clamped = Math.max(0, Math.min(1, t));
-        return [
-          Math.round(lerp(c1[0], c2[0], clamped)),
-          Math.round(lerp(c1[1], c2[1], clamped)),
-          Math.round(lerp(c1[2], c2[2], clamped))
-        ];
-      }
-
-      // Smooth directional color based on signed frequency deviation (diffHz = currentHz - refHz)
-      // 0 Hz -> Emerald Green [16, 185, 129]
-      // Negative (Left / lower freq) -> Cyan [6, 182, 212] -> Blue [59, 130, 246] -> Violet [168, 85, 247]
-      // Positive (Right / higher freq) -> Amber [251, 191, 36] -> Orange [249, 115, 22] -> Rose Red [244, 63, 94]
-      function getDeviationRGB(diffHz) {
-        const green = [16, 185, 129];
-        const maxScaleHz = 360; // Full color saturation at ±360 Hz
-
-        if (diffHz < 0) {
-          const norm = Math.min(1, Math.abs(diffHz) / maxScaleHz);
-          const cyan = [6, 182, 212];
-          const blue = [59, 130, 246];
-          const violet = [168, 85, 247];
-
-          if (norm < 0.35) {
-            return lerpRGB(green, cyan, norm / 0.35);
-          } else if (norm < 0.7) {
-            return lerpRGB(cyan, blue, (norm - 0.35) / 0.35);
-          } else {
-            return lerpRGB(blue, violet, (norm - 0.7) / 0.3);
-          }
-        } else {
-          const norm = Math.min(1, diffHz / maxScaleHz);
-          const amber = [251, 191, 36];
-          const orange = [249, 115, 22];
-          const rose = [244, 63, 94];
-
-          if (norm < 0.35) {
-            return lerpRGB(green, amber, norm / 0.35);
-          } else if (norm < 0.7) {
-            return lerpRGB(amber, orange, (norm - 0.35) / 0.35);
-          } else {
-            return lerpRGB(orange, rose, (norm - 0.7) / 0.3);
-          }
-        }
-      }
-
-      function rgbToCss(rgb, alpha = 1) {
-        if (alpha < 1) {
-          return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
-        }
-        return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-      }
-
-      function formatSignedDrift(diffHz) {
-        const rounded = Math.round(diffHz);
-        if (Math.abs(rounded) <= 8) return '0 Гц (эталон)';
-        if (rounded < 0) return `← ${rounded} Гц`;
-        return `+${rounded} Гц →`;
-      }
-
-      function updateStateAndUI(analysis, dt) {
-        if (analysis.peak1) {
-          smoothPeak1Hz = smoothPeak1Hz * 0.70 + analysis.peak1.freq * 0.30;
-        }
-        if (analysis.peak2) {
-          smoothPeak2Hz = smoothPeak2Hz * 0.70 + analysis.peak2.freq * 0.30;
-        }
-
-        // Ensure peak1 < peak2
-        if (smoothPeak1Hz > smoothPeak2Hz - 220) {
-          const mid = (smoothPeak1Hz + smoothPeak2Hz) * 0.5;
-          smoothPeak1Hz = mid - 150;
-          smoothPeak2Hz = mid + 150;
-        }
-
-        // If the user is holding down the calibration button, adapt refF1, refF2 and screen window live!
+        // Update dashed reference lines only while user holds the calibration button
         if (isCalibratingHold) {
-          const adaptRate = Math.min(1, dt * 6.5);
-          refF1 = lerp(refF1, smoothPeak1Hz, adaptRate);
-          refF2 = lerp(refF2, smoothPeak2Hz, adaptRate);
-
-          const targetWin = computeWindowForRefs(refF1, refF2);
-          targetDisplayMinHz = targetWin.minHz;
-          targetDisplayMaxHz = targetWin.maxHz;
-        }
-
-        const diff1 = smoothPeak1Hz - refF1;
-        const diff2 = smoothPeak2Hz - refF2;
-
-        const rgb1 = getDeviationRGB(diff1);
-        const rgb2 = getDeviationRGB(diff2);
-        const css1 = rgbToCss(rgb1);
-        const css2 = rgbToCss(rgb2);
-
-        // Continuous proximity score (1.0 when both are dead-on refF1 & refF2, tapering smoothly)
-        const score1 = Math.exp(-Math.pow(diff1 / 210, 2));
-        const score2 = Math.exp(-Math.pow(diff2 / 210, 2));
-        const instantScore = (score1 + score2) * 0.5;
-        smoothAlignmentScore = lerp(smoothAlignmentScore, instantScore, Math.min(1, dt * 5.0));
-
-        const pct = Math.round(smoothAlignmentScore * 100);
-        holdTimerEl.textContent = `${pct}%`;
-
-        const avgDrift = (Math.abs(diff1) + Math.abs(diff2)) * 0.5;
-        const avgRGB = getDeviationRGB(Math.abs(diff1) > Math.abs(diff2) ? diff1 : diff2);
-        holdTimerEl.style.color = rgbToCss(avgRGB);
-
-        // Update Pill 1 (1st Formant - Middle-Right)
-        valF1.textContent = `${Math.round(smoothPeak1Hz)} Гц`;
-        valF1.style.color = css1;
-        driftF1.textContent = formatSignedDrift(diff1);
-        driftF1.style.color = css1;
-        pillF1.style.borderColor = rgbToCss(rgb1, 0.55);
-        pillF1.style.backgroundColor = rgbToCss(rgb1, 0.10);
-
-        // Update Pill 2 (2nd Formant - Far-Right)
-        valF2.textContent = `${Math.round(smoothPeak2Hz)} Гц`;
-        valF2.style.color = css2;
-        driftF2.textContent = formatSignedDrift(diff2);
-        driftF2.style.color = css2;
-        pillF2.style.borderColor = rgbToCss(rgb2, 0.55);
-        pillF2.style.backgroundColor = rgbToCss(rgb2, 0.10);
-
-        // Update Left Reserve / Spread Pill
-        const ghostHz = Math.round(refF1 - (refF2 - refF1));
-        leftSlotHz.textContent = `~${ghostHz} Гц`;
-        const spreadDelta = Math.round((smoothPeak2Hz - smoothPeak1Hz) - (refF2 - refF1));
-        if (Math.abs(spreadDelta) <= 20) {
-          valSpread.textContent = `Δ ${Math.round(smoothPeak2Hz - smoothPeak1Hz)} Гц (ровно)`;
-          valSpread.style.color = '#34d399';
-        } else if (spreadDelta > 0) {
-          valSpread.textContent = `← +${spreadDelta} Гц шире →`;
-          valSpread.style.color = '#fbbf24';
-        } else {
-          valSpread.textContent = `→ ${spreadDelta} Гц уже ←`;
-          valSpread.style.color = '#38bdf8';
-        }
-
-        // Update Top Praise Banner continuously
-        statusOrb.style.backgroundColor = rgbToCss(avgRGB);
-        statusOrb.style.boxShadow = `0 0 14px ${rgbToCss(avgRGB)}`;
-
-        if (isCalibratingHold) {
-          appShell.classList.add('praise-active');
-          praiseCard.style.borderColor = 'rgba(34, 211, 238, 0.75)';
-          praiseTitle.textContent = 'Подстройка экрана под вашу «У»...';
-          praiseTitle.style.color = '#67e8f9';
-          praiseSubtitle.textContent = `Эталоны справа: ${Math.round(refF1)} Гц и ${Math.round(refF2)} Гц (отпустите кнопку для фиксации)`;
-        } else if (avgDrift < 65) {
-          appShell.classList.add('praise-active');
-          praiseCard.style.borderColor = rgbToCss(avgRGB, 0.65);
-          praiseTitle.textContent = 'Идеально! Обе линии изумрудные в центре «У» ✨';
-          praiseTitle.style.color = '#6ee7b7';
-          praiseSubtitle.textContent = `Гласная собрана точно по осям ${Math.round(refF1)} и ${Math.round(refF2)} Гц`;
-        } else if (avgDrift < 145) {
-          appShell.classList.remove('praise-active');
-          praiseCard.style.borderColor = rgbToCss(avgRGB, 0.45);
-          praiseTitle.textContent = 'Хорошо! Небольшой оттенок смещения от «У»';
-          praiseTitle.style.color = rgbToCss(avgRGB);
-          praiseSubtitle.textContent = 'Ориентируйтесь по цвету линий: возвращайте обе к зелёному';
-        } else {
-          appShell.classList.remove('praise-active');
-          praiseCard.style.borderColor = rgbToCss(avgRGB, 0.55);
-          if (diff1 < -90 && diff2 > 90) {
-            praiseTitle.textContent = 'Линии разъехались (левая синеет, правая краснеет)';
-          } else if (diff1 < -90 && diff2 < -90) {
-            praiseTitle.textContent = 'Обе форманты ушли влево (в холодный синий цвет)';
-          } else if (diff1 > 90 && diff2 > 90) {
-            praiseTitle.textContent = 'Обе форманты ушли вправо (в тёплый красный цвет)';
-          } else {
-            praiseTitle.textContent = 'Плавное отклонение от осей «У» — соберите звук';
-          }
-          praiseTitle.style.color = rgbToCss(avgRGB);
-          praiseSubtitle.textContent = `1-я: ${formatSignedDrift(diff1)} | 2-я: ${formatSignedDrift(diff2)}`;
-        }
-
-        // Push current formant positions (in Hz) into the trajectory buffer
-        trackHistory.unshift({
-          f1: smoothPeak1Hz,
-          f2: smoothPeak2Hz
-        });
-
-        const maxRows = Math.ceil(waterfallHeight / WATERFALL_SPEED_PX) + 2;
-        if (trackHistory.length > maxRows) {
-          trackHistory.pop();
+          refF1 = refF1 * 0.82 + liveF1Hz * 0.18;
+          refF2 = refF2 * 0.82 + liveF2Hz * 0.18;
         }
       }
 
@@ -787,299 +593,227 @@
         return displayMinHz + (x / width) * (displayMaxHz - displayMinHz);
       }
 
-      // Color map for the background waterfall ridges:
-      // Tints every frequency pixel according to its proximity and direction relative to the nearest reference axis
-      function ridgeColorRGB(intensity, freqHz) {
-        if (intensity <= 0.03) {
-          return [5, 8, 17];
-        }
-
-        const midBoundary = (refF1 + refF2) * 0.5;
-        const leftBoundary = refF1 - (refF2 - refF1) * 0.55;
-
-        let localDiff = 0;
-        if (freqHz < leftBoundary) {
-          // Far-left reserve slot region: subtle cool slate-indigo tint
-          const t = Math.pow(intensity, 1.15);
-          return [
-            Math.round(6 + t * 55),
-            Math.round(10 + t * 85),
-            Math.round(22 + t * 155)
-          ];
-        } else if (freqHz <= midBoundary) {
-          localDiff = freqHz - refF1;
-        } else {
-          localDiff = freqHz - refF2;
-        }
-
-        const targetRGB = getDeviationRGB(localDiff);
-        const deepBg = [6, 10, 20];
-        const brightCore = [
-          Math.min(255, targetRGB[0] + 65),
-          Math.min(255, targetRGB[1] + 65),
-          Math.min(255, targetRGB[2] + 65)
-        ];
-
-        if (intensity < 0.65) {
-          return lerpRGB(deepBg, targetRGB, intensity / 0.65);
-        } else {
-          return lerpRGB(targetRGB, brightCore, (intensity - 0.65) / 0.35);
-        }
-      }
-
-      function stepWaterfallBitmap(prevMinHz, prevMaxHz) {
-        const w = waterfallCanvas.width;
-        const h = waterfallCanvas.height;
-        if (w <= 0 || h <= 0) return;
-
-        // 1. Copy current waterfall to swap canvas and re-project horizontally if displayMinHz/displayMaxHz changed
-        tempSwapCtx.clearRect(0, 0, w, h);
-        tempSwapCtx.drawImage(waterfallCanvas, 0, 0);
-
-        waterfallCtx.fillStyle = '#050811';
-        waterfallCtx.fillRect(0, 0, w, h);
-
-        const destX1 = freqToX(prevMinHz, w);
-        const destX2 = freqToX(prevMaxHz, w);
-        const destW = destX2 - destX1;
-
-        waterfallCtx.drawImage(
-          tempSwapCanvas,
-          0, 0, w, h - WATERFALL_SPEED_PX,
-          destX1, WATERFALL_SPEED_PX, destW, h - WATERFALL_SPEED_PX
-        );
-
-        // 2. Render new top row (height = WATERFALL_SPEED_PX) from zero-threshold normalized ridge
-        const sampleRate = audioCtx ? audioCtx.sampleRate : 48000;
-        const binCount = analyser ? analyser.frequencyBinCount : 2048;
-        const rowImg = waterfallCtx.createImageData(w, WATERFALL_SPEED_PX);
-        const data = rowImg.data;
-
-        for (let x = 0; x < w; x++) {
-          const freq = xToFreq(x, w);
-          const exactBin = (freq / (sampleRate / 2)) * binCount;
-          const b0 = Math.max(0, Math.min(binCount - 1, Math.floor(exactBin)));
-          const b1 = Math.max(0, Math.min(binCount - 1, b0 + 1));
+      function renderRowPixels(targetData, rowOffsetPx, width, ridgeRow, sampleRate, binCount) {
+        const nyquist = sampleRate / 2;
+        for (let x = 0; x < width; x++) {
+          const freq = xToFreq(x, width);
+          const exactBin = (freq / nyquist) * binCount;
+          const b0 = Math.max(0, Math.min(ridgeRow.length - 1, Math.floor(exactBin)));
+          const b1 = Math.max(0, Math.min(ridgeRow.length - 1, b0 + 1));
           const frac = exactBin - b0;
 
-          const intensity = normalizedRidge[b0] * (1 - frac) + normalizedRidge[b1] * frac;
-          const [r, g, b] = ridgeColorRGB(intensity, freq);
+          const val255 = Math.round(ridgeRow[b0] * (1 - frac) + ridgeRow[b1] * frac);
+          const lutIdx = val255 * 3;
+          const r = colorLUT[lutIdx];
+          const g = colorLUT[lutIdx + 1];
+          const b = colorLUT[lutIdx + 2];
 
-          for (let row = 0; row < WATERFALL_SPEED_PX; row++) {
-            const idx = (row * w + x) * 4;
-            data[idx] = r;
-            data[idx + 1] = g;
-            data[idx + 2] = b;
-            data[idx + 3] = 255;
+          for (let dy = 0; dy < WATERFALL_SPEED_PX; dy++) {
+            const y = rowOffsetPx + dy;
+            if (y >= waterfallHeight) break;
+            const idx = (y * width + x) * 4;
+            targetData[idx] = r;
+            targetData[idx + 1] = g;
+            targetData[idx + 2] = b;
+            targetData[idx + 3] = 255;
           }
         }
-
-        waterfallCtx.putImageData(rowImg, 0, 0);
       }
 
-      function drawVisualizer(dt) {
+      function updateWaterfallBitmap() {
+        const w = waterfallCanvas.width;
+        const h = waterfallCanvas.height;
+        if (w <= 0 || h <= 0 || ridgeHistory.length === 0) return;
+
+        const sampleRate = audioCtx ? audioCtx.sampleRate : 48000;
+        const binCount = analyser ? analyser.frequencyBinCount : 2048;
+
+        if (needsFullWaterfallRedraw) {
+          needsFullWaterfallRedraw = false;
+          const fullImg = waterfallCtx.createImageData(w, h);
+          const data = fullImg.data;
+          // Fill background
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = 5;
+            data[i + 1] = 8;
+            data[i + 2] = 17;
+            data[i + 3] = 255;
+          }
+          const maxRows = Math.min(ridgeHistory.length, Math.ceil(h / WATERFALL_SPEED_PX));
+          for (let r = 0; r < maxRows; r++) {
+            renderRowPixels(data, r * WATERFALL_SPEED_PX, w, ridgeHistory[r], sampleRate, binCount);
+          }
+          waterfallCtx.putImageData(fullImg, 0, 0);
+        } else {
+          // Scroll existing waterfall down by WATERFALL_SPEED_PX and draw newest row at top
+          waterfallCtx.drawImage(
+            waterfallCanvas,
+            0, 0, w, h - WATERFALL_SPEED_PX,
+            0, WATERFALL_SPEED_PX, w, h - WATERFALL_SPEED_PX
+          );
+          const rowImg = waterfallCtx.createImageData(w, WATERFALL_SPEED_PX);
+          renderRowPixels(rowImg.data, 0, w, ridgeHistory[0], sampleRate, binCount);
+          waterfallCtx.putImageData(rowImg, 0, 0);
+        }
+      }
+
+      function drawVisualizer() {
         const w = canvasWidth;
         const h = canvasHeight;
-        const wfTop = TOP_SOCKET_BAR_HEIGHT;
-
-        // Smoothly interpolate display frequency window (especially active while holding calibration button)
-        const prevMinHz = displayMinHz;
-        const prevMaxHz = displayMaxHz;
-        const winLerp = Math.min(1, dt * 8.5);
-        displayMinHz = lerp(displayMinHz, targetDisplayMinHz, winLerp);
-        displayMaxHz = lerp(displayMaxHz, targetDisplayMaxHz, winLerp);
+        const wfTop = TOP_HEADER_HEIGHT;
 
         ctx.clearRect(0, 0, w, h);
 
-        // 1. Update and draw scrolling waterfall bitmap with horizontal scale lock
-        stepWaterfallBitmap(prevMinHz, prevMaxHz);
+        // 1. Update and draw pure spectrogram waterfall
+        updateWaterfallBitmap();
         ctx.drawImage(waterfallCanvas, 0, wfTop, w, waterfallHeight);
 
-        // 2. Draw vertical frequency grid lines
+        // 2. Draw subtle frequency grid lines over the waterfall
         ctx.lineWidth = 1;
         ctx.font = '500 10px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
 
-        const startGridHz = Math.ceil(displayMinHz / 500) * 500;
-        for (let freq = startGridHz; freq <= displayMaxHz; freq += 500) {
+        const gridStepHz = displaySpanHz > 2600 ? 500 : 250;
+        const firstGridHz = Math.ceil(displayMinHz / gridStepHz) * gridStepHz;
+
+        for (let freq = firstGridHz; freq <= displayMaxHz; freq += gridStepHz) {
           const x = freqToX(freq, w);
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.10)';
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
           ctx.beginPath();
           ctx.moveTo(x, wfTop);
           ctx.lineTo(x, h);
           ctx.stroke();
-
-          ctx.fillStyle = 'rgba(148, 163, 184, 0.42)';
-          ctx.fillText(`${(freq / 1000).toFixed(1)}k`, x, h - 54);
         }
 
-        // 3. Draw the Ghost Reserve Slot on the Left + Two Active Reference Axes on the Right
-        // No hard boundary boxes — each slot is a soft glowing center reference line
-        const ghostHz = refF1 - (refF2 - refF1);
-        const ghostX = freqToX(ghostHz, w);
-        const f1CenterX = freqToX(refF1, w);
-        const f2CenterX = freqToX(refF2, w);
-
-        ctx.save();
-        // Left reserve slot axis (dashed subtle guide)
-        ctx.setLineDash([4, 6]);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
-        ctx.beginPath();
-        ctx.moveTo(ghostX, wfTop);
-        ctx.lineTo(ghostX, h);
-        ctx.stroke();
-
-        // Active Reference Axis 1 & 2 (soft emerald centerlines without boundary walls)
-        ctx.setLineDash([6, 6]);
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = isCalibratingHold ? 'rgba(34, 211, 238, 0.75)' : 'rgba(16, 185, 129, 0.45)';
-        ctx.beginPath();
-        ctx.moveTo(f1CenterX, wfTop);
-        ctx.lineTo(f1CenterX, h);
-        ctx.moveTo(f2CenterX, wfTop);
-        ctx.lineTo(f2CenterX, h);
-        ctx.stroke();
-        ctx.restore();
-
-        // 4. Overlay Continuous Color-Shifting Formant Trajectories
-        if (trackHistory.length > 1) {
-          ctx.lineWidth = 3.2;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-
-          for (let i = 1; i < trackHistory.length; i++) {
-            const prev = trackHistory[i - 1];
-            const curr = trackHistory[i];
-            const y0 = wfTop + (i - 1) * WATERFALL_SPEED_PX;
-            const y1 = wfTop + i * WATERFALL_SPEED_PX;
-
-            // 1st Formant Trajectory colored smoothly by signed deviation from refF1
-            const c1 = getDeviationRGB(curr.f1 - refF1);
-            ctx.strokeStyle = rgbToCss(c1);
-            ctx.beginPath();
-            ctx.moveTo(freqToX(prev.f1, w), y0);
-            ctx.lineTo(freqToX(curr.f1, w), y1);
-            ctx.stroke();
-
-            // 2nd Formant Trajectory colored smoothly by signed deviation from refF2
-            const c2 = getDeviationRGB(curr.f2 - refF2);
-            ctx.strokeStyle = rgbToCss(c2);
-            ctx.beginPath();
-            ctx.moveTo(freqToX(prev.f2, w), y0);
-            ctx.lineTo(freqToX(curr.f2, w), y1);
-            ctx.stroke();
-          }
-        }
-
-        // 5. Draw Top Anchor Header ("Эталоны «У» справа + резервный слот слева")
+        // 3. Draw top live spectrum strip (shows current formant hills and frequencies)
         ctx.fillStyle = '#090f1d';
         ctx.fillRect(0, 0, w, wfTop);
 
-        ctx.strokeStyle = 'rgba(51, 65, 85, 0.9)';
-        ctx.lineWidth = 1.5;
+        if (ridgeHistory.length > 0 && audioCtx && analyser) {
+          const latestRow = ridgeHistory[0];
+          const sampleRate = audioCtx.sampleRate;
+          const binCount = analyser.frequencyBinCount;
+          const nyquist = sampleRate / 2;
+
+          ctx.beginPath();
+          ctx.moveTo(0, wfTop - 18);
+          for (let x = 0; x < w; x += 2) {
+            const freq = xToFreq(x, w);
+            const exactBin = (freq / nyquist) * binCount;
+            const b0 = Math.max(0, Math.min(latestRow.length - 1, Math.floor(exactBin)));
+            const norm = latestRow[b0] / 255;
+            const y = (wfTop - 18) - norm * 42;
+            ctx.lineTo(x, y);
+          }
+          ctx.lineTo(w, wfTop - 18);
+          ctx.closePath();
+
+          const envGrad = ctx.createLinearGradient(0, wfTop - 62, 0, wfTop - 18);
+          envGrad.addColorStop(0, 'rgba(56, 189, 248, 0.38)');
+          envGrad.addColorStop(1, 'rgba(56, 189, 248, 0.03)');
+          ctx.fillStyle = envGrad;
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(125, 211, 252, 0.85)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // 4. Draw frequency ruler along the bottom edge of the top strip
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, wfTop - 18, w, 18);
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.8)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, wfTop);
         ctx.lineTo(w, wfTop);
         ctx.stroke();
 
-        const socketY = 38;
-
-        // Draw Ghost Slot Marker on the Left
-        ctx.save();
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.arc(ghostX, socketY, 9, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.font = '600 9px "Inter", sans-serif';
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
-        ctx.fillText(`РЕЗЕРВ (~${Math.round(ghostHz)})`, ghostX, 15);
-
-        // Draw Soft Center Target Rings for Ref 1 and Ref 2 on the Right
-        [
-          { x: f1CenterX, label: `ЭТАЛОН 1 (${Math.round(refF1)})` },
-          { x: f2CenterX, label: `ЭТАЛОН 2 (${Math.round(refF2)})` }
-        ].forEach((slot) => {
-          const grad = ctx.createRadialGradient(slot.x, socketY, 2, slot.x, socketY, 26);
-          grad.addColorStop(0, 'rgba(16, 185, 129, 0.38)');
-          grad.addColorStop(1, 'rgba(16, 185, 129, 0)');
-          ctx.fillStyle = grad;
+        for (let freq = Math.ceil(displayMinHz / 100) * 100; freq <= displayMaxHz; freq += 100) {
+          const x = freqToX(freq, w);
+          const isMajor = freq % gridStepHz === 0;
+          ctx.strokeStyle = isMajor ? 'rgba(148, 163, 184, 0.65)' : 'rgba(148, 163, 184, 0.25)';
           ctx.beginPath();
-          ctx.arc(slot.x, socketY, 26, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Center target tick
-          ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(slot.x, socketY - 12);
-          ctx.lineTo(slot.x, socketY + 12);
+          ctx.moveTo(x, wfTop - (isMajor ? 6 : 3));
+          ctx.lineTo(x, wfTop);
           ctx.stroke();
 
-          ctx.fillStyle = 'rgba(110, 231, 183, 0.92)';
-          ctx.fillText(slot.label, slot.x, 15);
+          if (isMajor) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '500 10px "JetBrains Mono", monospace';
+            ctx.fillText(`${freq}`, x, wfTop - 7);
+          }
+        }
+
+        // 5. Draw live formant peak markers & Hz labels in the top strip (so current formant frequencies are always readable)
+        [
+          { hz: liveF1Hz, prom: liveF1Prominence },
+          { hz: liveF2Hz, prom: liveF2Prominence }
+        ].forEach((peak) => {
+          const px = freqToX(peak.hz, w);
+          if (px < 10 || px > w - 10) return;
+
+          const py = (wfTop - 18) - Math.max(0.15, peak.prom) * 42;
+
+          // Small pointer dot on the live envelope hill
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath();
+          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Live formant frequency tag above the hill
+          const label = `${Math.round(peak.hz)} Гц`;
+          ctx.font = '700 11px "JetBrains Mono", monospace';
+          const textW = ctx.measureText(label).width;
+          const boxX = Math.max(4, Math.min(w - textW - 12, px - textW * 0.5 - 4));
+          const boxY = 4;
+
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(boxX, boxY, textW + 8, 18, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#e0f2fe';
+          ctx.textAlign = 'center';
+          ctx.fillText(label, boxX + (textW + 8) * 0.5, boxY + 13);
         });
 
-        // 6. Draw Live Formant Orbs & Gradient Bridge inside the Top Header
-        const p1X = freqToX(smoothPeak1Hz, w);
-        const p2X = freqToX(smoothPeak2Hz, w);
-        const rgb1 = getDeviationRGB(smoothPeak1Hz - refF1);
-        const rgb2 = getDeviationRGB(smoothPeak2Hz - refF2);
-        const color1 = rgbToCss(rgb1);
-        const color2 = rgbToCss(rgb2);
+        // 6. Draw the TWO VERTICAL DASHED CALIBRATION LINES across the entire graph
+        [refF1, refF2].forEach((refHz) => {
+          const rx = freqToX(refHz, w);
+          if (rx < 0 || rx > w) return;
 
-        // Smooth gradient bridge connecting the two live formants
-        ctx.save();
-        const bridgeGrad = ctx.createLinearGradient(p1X, socketY, p2X, socketY);
-        bridgeGrad.addColorStop(0, color1);
-        bridgeGrad.addColorStop(1, color2);
-        ctx.beginPath();
-        ctx.moveTo(p1X, socketY);
-        ctx.lineTo(p2X, socketY);
-        ctx.strokeStyle = bridgeGrad;
-        ctx.lineWidth = 3.5;
-        ctx.stroke();
-        ctx.restore();
+          ctx.save();
+          ctx.setLineDash([7, 6]);
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = isCalibratingHold
+            ? 'rgba(251, 191, 36, 0.95)'
+            : 'rgba(251, 191, 36, 0.82)';
+          ctx.beginPath();
+          ctx.moveTo(rx, wfTop - 18);
+          ctx.lineTo(rx, h);
+          ctx.stroke();
+          ctx.restore();
 
-        // Live Orb 1
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(p1X, socketY, 9, 0, Math.PI * 2);
-        ctx.fillStyle = color1;
-        ctx.shadowColor = color1;
-        ctx.shadowBlur = 14;
-        ctx.fill();
-        ctx.lineWidth = 2.2;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-        ctx.restore();
-
-        // Live Orb 2
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(p2X, socketY, 9, 0, Math.PI * 2);
-        ctx.fillStyle = color2;
-        ctx.shadowColor = color2;
-        ctx.shadowBlur = 14;
-        ctx.fill();
-        ctx.lineWidth = 2.2;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-        ctx.restore();
+          // Reference Hz label attached to the dashed line at the top of the waterfall
+          const refText = `${Math.round(refHz)}`;
+          ctx.font = '700 10px "JetBrains Mono", monospace';
+          const tw = ctx.measureText(refText).width;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.fillRect(rx - tw * 0.5 - 3, wfTop + 4, tw + 6, 15);
+          ctx.fillStyle = '#fbbf24';
+          ctx.textAlign = 'center';
+          ctx.fillText(refText, rx, wfTop + 15);
+        });
       }
 
-      function animateLoop(now) {
+      function animateLoop() {
         if (!isRunning) return;
-        const dt = Math.min(0.1, (now - lastFrameTime) / 1000);
-        lastFrameTime = now;
-
-        const analysis = analyzeWhisperFormants();
-        updateStateAndUI(analysis, dt);
-        drawVisualizer(dt);
-
+        analyzeWhisperFormants();
+        drawVisualizer();
         requestAnimationFrame(animateLoop);
       }
     })();
