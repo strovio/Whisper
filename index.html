@@ -11,15 +11,14 @@
   <style>
     :root {
       --bg-deep: #070b14;
-      --f1-color: #22d3ee; /* Cyan for 1st high formant (~2460 Hz) */
-      --f2-color: #fbbf24; /* Amber/Gold for 2nd high formant (~3060 Hz) */
-      --both-color: #10b981; /* Emerald for full Chiaroscuro lock */
+      --center-color: #10b981;
     }
 
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
+      -webkit-touch-callout: none;
     }
 
     html, body {
@@ -56,6 +55,17 @@
     .mic-pulse {
       animation: pulse-ring 2.4s infinite ease-in-out;
     }
+
+    #calibrate-hold-btn {
+      touch-action: none;
+    }
+
+    #calibrate-hold-btn.calibrating-active {
+      background: linear-gradient(90deg, rgba(6, 182, 212, 0.35), rgba(16, 185, 129, 0.45));
+      border-color: #22d3ee;
+      box-shadow: 0 0 25px rgba(34, 211, 238, 0.45);
+      transform: scale(0.985);
+    }
   </style>
 </head>
 <body class="w-full h-full flex flex-col justify-between relative">
@@ -68,85 +78,83 @@
       <div id="praise-card" class="w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-3.5 py-2.5 flex items-center justify-between transition-all duration-300 shadow-lg">
         <div class="flex items-center gap-3 min-w-0">
           <!-- Status Orb -->
-          <div id="status-orb" class="w-4 h-4 rounded-full bg-slate-600 shrink-0 transition-all duration-300"></div>
+          <div id="status-orb" class="w-4 h-4 rounded-full bg-emerald-400 shrink-0 transition-all duration-300"></div>
           <div class="truncate">
             <div id="praise-title" class="text-sm sm:text-lg font-bold tracking-tight text-slate-200 truncate">
               Ожидание микрофона
             </div>
             <div id="praise-subtitle" class="text-xs sm:text-sm text-slate-400 truncate">
-              Прошепчите «У» для захвата эталонных рельсов
+              Зажмите кнопку внизу и прошепчите «У» для подстройки экрана
             </div>
           </div>
         </div>
 
         <!-- Continuity / Stability Score Badge -->
         <div id="streak-badge" class="flex flex-col items-end shrink-0 pl-2">
-          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Внутри «У»</span>
-          <span id="hold-timer" class="mono text-sm font-bold text-emerald-400">0.0 с</span>
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Близость к «У»</span>
+          <span id="hold-timer" class="mono text-sm font-bold text-emerald-400">100%</span>
         </div>
       </div>
 
-      <!-- Live Formant Position & Spread Diagnostics Pills -->
+      <!-- Live Formant Position & Left Slot Space Diagnostics Pills -->
       <div class="grid grid-cols-3 gap-1.5 sm:gap-2 w-full">
-        <!-- Formant 1 Position Pill -->
+        <!-- Left Reserve Space / Overall Balance Pill -->
+        <div id="pill-spread" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Слот слева / Δ</span>
+            <span id="left-slot-hz" class="mono text-[10px] font-medium text-slate-500">резерв</span>
+          </div>
+          <span id="val-spread" class="mono text-xs sm:text-sm font-bold text-slate-300 mt-0.5">Стабильно</span>
+        </div>
+
+        <!-- Formant 1 Position Pill (Middle-Right Slot) -->
         <div id="pill-f1" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-semibold uppercase tracking-wide text-cyan-400/90">1-я (Купол)</span>
-            <span id="drift-f1" class="mono text-[10px] font-bold text-slate-500">эталон</span>
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-300">1-я (Правее центра)</span>
+            <span id="drift-f1" class="mono text-[10px] font-bold text-emerald-400">0 Гц</span>
           </div>
-          <span id="val-f1" class="mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5">— Гц</span>
+          <span id="val-f1" class="mono text-xs sm:text-sm font-bold text-slate-200 mt-0.5">— Гц</span>
         </div>
 
-        <!-- Spread / Locking Indicator Pill -->
-        <div id="pill-spread" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between items-center text-center transition-all duration-200">
-          <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ширина «У»</span>
-          <span id="val-spread" class="mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5">Калибровка</span>
-        </div>
-
-        <!-- Formant 2 Position Pill -->
+        <!-- Formant 2 Position Pill (Far-Right Slot) -->
         <div id="pill-f2" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-semibold uppercase tracking-wide text-amber-400/90">2-я (Блеск)</span>
-            <span id="drift-f2" class="mono text-[10px] font-bold text-slate-500">эталон</span>
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-300">2-я (Крайняя правая)</span>
+            <span id="drift-f2" class="mono text-[10px] font-bold text-emerald-400">0 Гц</span>
           </div>
-          <span id="val-f2" class="mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5">— Гц</span>
+          <span id="val-f2" class="mono text-xs sm:text-sm font-bold text-slate-200 mt-0.5">— Гц</span>
         </div>
       </div>
     </header>
 
     <!-- Center Interactive Waterfall Container -->
     <main class="w-full flex-1 my-2 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800/90 shadow-inner flex flex-col">
-      <canvas id="visualizer-canvas" class="w-full h-full block cursor-pointer" title="Нажмите на водопад, чтобы перезаписать эталонную гласную «У»"></canvas>
+      <canvas id="visualizer-canvas" class="w-full h-full block"></canvas>
 
-      <!-- Floating minimal controls (only visible after mic starts) -->
-      <div id="controls-bar" class="hidden absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 pointer-events-none">
-        <div class="pointer-events-auto flex items-center gap-2 bg-slate-900/85 backdrop-blur-md border border-slate-800/90 px-2.5 py-1.5 rounded-xl">
-          <span class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Порог тишины</span>
-          <input id="sensitivity-slider" type="range" min="-15" max="20" value="6" step="1"
-            class="w-16 sm:w-24 accent-cyan-400 h-1.5 bg-slate-700 rounded-lg cursor-pointer" />
-        </div>
-
-        <button id="recalibrate-btn" type="button"
-          class="pointer-events-auto text-[11px] font-semibold text-emerald-300 hover:text-white bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 active:scale-95 transition px-3 py-1.5 rounded-xl shadow-md">
-          Перезахватить «У»
+      <!-- Floating Press-and-Hold Calibration Button (visible after mic starts) -->
+      <div id="controls-bar" class="hidden absolute bottom-3 left-3 right-3 flex items-center justify-center pointer-events-none">
+        <button id="calibrate-hold-btn" type="button"
+          class="pointer-events-auto w-full sm:w-auto sm:min-w-[340px] py-3 px-5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-emerald-500/50 text-emerald-300 font-bold text-xs sm:text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer">
+          <span id="calib-btn-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]"></span>
+          <span id="calib-btn-text">УДЕРЖИВАЙТЕ И ШЕПЧИТЕ «У» ДЛЯ КАЛИБРОВКИ</span>
         </button>
       </div>
     </main>
 
-    <!-- Minimalist Legend Footer -->
-    <footer class="w-full flex items-center justify-between text-[11px] text-slate-400 px-1 shrink-0">
-      <div class="flex items-center gap-3 flex-wrap">
+    <!-- Minimalist Continuous Color Legend Footer -->
+    <footer class="w-full flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 px-1 shrink-0">
+      <div class="flex items-center gap-3 flex-wrap w-full justify-between sm:justify-start">
         <span class="inline-flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-sm border border-dashed border-cyan-400 bg-cyan-400/20"></span>Рельсы «У»
+          <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-cyan-400"></span>← Ушла влево (ниже)
         </span>
         <span class="inline-flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>Вмонтировано в «У»
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]"></span>В центре «У»
         </span>
         <span class="inline-flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-rose-400"></span>Разъехались
+          <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-400 to-rose-500"></span>Ушла вправо (выше) →
         </span>
       </div>
-      <span class="text-[10px] text-slate-500 hidden sm:inline">Тап по водопаду = новая «У»</span>
+      <span class="text-[10px] text-slate-500 hidden md:inline shrink-0">Максимальная чувствительность без порога тишины</span>
     </footer>
 
     <!-- Initial One-Button Microphone Start Overlay -->
@@ -168,8 +176,9 @@
           Водопад Whisper Chiaroscuro
         </h1>
         <p class="text-sm text-slate-300 leading-relaxed mb-6">
-          1. Включите микрофон и прошепчите эталонную гласную <strong>«У»</strong> — программа зафиксирует два вертикальных коридора.<br/>
-          2. Шепчите текст арии, удерживая все остальные гласные <strong>вмонтированными в рельсы «У»</strong>, чтобы дорожки не разъезжались.
+          1. Работает без порога громкости — <strong>чем тише шёпот, тем лучше</strong>.<br/>
+          2. <strong>Зажмите кнопку калибровки</strong> и прошепчите «У» — экран сам подстроится и выставит два эталона в правой части, оставив слева место под ещё один паз.<br/>
+          3. Отпустите кнопку: линии плавно меняют цвет от <strong>зелёного</strong> (в эталоне) к <strong>сине-фиолетовому</strong> (смещение влево) или <strong>жёлто-алому</strong> (смещение вправо).
         </p>
 
         <button id="start-mic-text-btn" type="button"
@@ -185,47 +194,54 @@
 
   <script>
     (function () {
-      // Frequency window focused on Whisper Chiaroscuro (1450 Hz to 4250 Hz)
-      const MIN_DISPLAY_HZ = 1450;
-      const MAX_DISPLAY_HZ = 4250;
+      // Absolute search bounds for the two high whisper formants
+      const SEARCH_MIN_HZ = 1650;
+      const SEARCH_MAX_HZ = 4200;
+      const MIN_PEAK_SEPARATION_HZ = 290;
+      const MAX_PEAK_SEPARATION_HZ = 1400;
 
-      // Search bounds for the two high whisper formants
-      const SEARCH_MIN_HZ = 1750;
-      const SEARCH_MAX_HZ = 4050;
-      const MIN_PEAK_SEPARATION_HZ = 310;
-      const MAX_PEAK_SEPARATION_HZ = 1350;
+      // Screen layout ratios:
+      // Place both active "У" slots in the right part of the screen (58% and 85% of width),
+      // leaving the left part (~31% of width) open as space for a third lower slot.
+      const SLOT_F1_X_RATIO = 0.58;
+      const SLOT_F2_X_RATIO = 0.85;
+      const GHOST_SLOT_X_RATIO = SLOT_F1_X_RATIO - (SLOT_F2_X_RATIO - SLOT_F1_X_RATIO); // ~0.31
 
-      // Allowed deviation (Hz) from the calibrated "У" rails before warning that formants spread apart
-      const RAIL_TOLERANCE_HZ = 185;
-
-      // Default starting anchors (around user's ~2461 Hz and ~3059 Hz) prior to "У" lock
+      // Default starting anchors (around ~2461 Hz and ~3059 Hz)
       const DEFAULT_REF_F1 = 2461;
       const DEFAULT_REF_F2 = 3059;
 
       let refF1 = DEFAULT_REF_F1;
       let refF2 = DEFAULT_REF_F2;
 
-      // Calibration state: locks automatically on the first stable whispered "У" (~0.75 sec)
-      let isCalibrated = false;
-      let calibrationProgress = 0; // 0..1
-      let calibAccumF1 = 0;
-      let calibAccumF2 = 0;
-      let calibSamples = 0;
+      // Compute display frequency window so refF1 sits at SLOT_F1_X_RATIO and refF2 sits at SLOT_F2_X_RATIO
+      function computeWindowForRefs(f1, f2) {
+        const spread = Math.max(360, f2 - f1);
+        const totalSpan = spread / (SLOT_F2_X_RATIO - SLOT_F1_X_RATIO);
+        const minHz = Math.max(700, f1 - SLOT_F1_X_RATIO * totalSpan);
+        const maxHz = minHz + totalSpan;
+        return { minHz, maxHz };
+      }
 
-      // Real-time smoothed detected formant positions
+      const initialWin = computeWindowForRefs(refF1, refF2);
+      let displayMinHz = initialWin.minHz;
+      let displayMaxHz = initialWin.maxHz;
+      let targetDisplayMinHz = initialWin.minHz;
+      let targetDisplayMaxHz = initialWin.maxHz;
+
+      // Press-and-hold calibration state
+      let isCalibratingHold = false;
+      let hasUserCalibrated = false;
+
+      // Real-time smoothed detected formant positions (always active, no silence gate)
       let smoothPeak1Hz = DEFAULT_REF_F1;
       let smoothPeak2Hz = DEFAULT_REF_F2;
-      let peak1Confidence = 0;
-      let peak2Confidence = 0;
 
-      // Stability & Hold timers
-      let holdDurationSec = 0;
+      // Continuous alignment score (0..1)
+      let smoothAlignmentScore = 1.0;
       let lastFrameTime = performance.now();
-      let graceTimer = 0;
-      let praiseLevel = 0;
 
-      // Waterfall history of formant center tracks (for crisp overlay trajectories)
-      // Each entry corresponds to a vertical shift of WATERFALL_SPEED_PX
+      // Waterfall history of formant center tracks
       const WATERFALL_SPEED_PX = 2;
       const TOP_SOCKET_BAR_HEIGHT = 64;
       let trackHistory = [];
@@ -236,7 +252,7 @@
       let rawFreqData = null;
       let smoothedEnvelope = null;
       let temporalSpectrum = null;
-      let normalizedRidge = null; // Loudness-independent formant position ridge (0..1)
+      let normalizedRidge = null;
       let isRunning = false;
 
       const appShell = document.getElementById('app-shell');
@@ -245,8 +261,9 @@
       const startMicTextBtn = document.getElementById('start-mic-text-btn');
       const micErrorBox = document.getElementById('mic-error-box');
       const controlsBar = document.getElementById('controls-bar');
-      const sensitivitySlider = document.getElementById('sensitivity-slider');
-      const recalibrateBtn = document.getElementById('recalibrate-btn');
+      const calibrateHoldBtn = document.getElementById('calibrate-hold-btn');
+      const calibBtnDot = document.getElementById('calib-btn-dot');
+      const calibBtnText = document.getElementById('calib-btn-text');
 
       const praiseCard = document.getElementById('praise-card');
       const statusOrb = document.getElementById('status-orb');
@@ -260,15 +277,18 @@
       const valF1 = document.getElementById('val-f1');
       const valF2 = document.getElementById('val-f2');
       const valSpread = document.getElementById('val-spread');
+      const leftSlotHz = document.getElementById('left-slot-hz');
       const driftF1 = document.getElementById('drift-f1');
       const driftF2 = document.getElementById('drift-f2');
 
       const canvas = document.getElementById('visualizer-canvas');
       const ctx = canvas.getContext('2d');
 
-      // Offscreen bitmap buffer for smooth scrolling colorful waterfall
+      // Offscreen bitmap buffers for smooth scrolling & dynamic horizontal rescaling
       const waterfallCanvas = document.createElement('canvas');
       const waterfallCtx = waterfallCanvas.getContext('2d');
+      const tempSwapCanvas = document.createElement('canvas');
+      const tempSwapCtx = tempSwapCanvas.getContext('2d');
 
       let canvasWidth = 320;
       let canvasHeight = 460;
@@ -286,42 +306,47 @@
         canvas.height = Math.round(canvasHeight * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // Preserve existing waterfall image on resize
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = waterfallCanvas.width || canvasWidth;
-        tempCanvas.height = waterfallCanvas.height || waterfallHeight;
-        tempCanvas.getContext('2d').drawImage(waterfallCanvas, 0, 0);
+        tempSwapCanvas.width = waterfallCanvas.width || canvasWidth;
+        tempSwapCanvas.height = waterfallCanvas.height || waterfallHeight;
+        tempSwapCtx.drawImage(waterfallCanvas, 0, 0);
 
         waterfallCanvas.width = canvasWidth;
         waterfallCanvas.height = waterfallHeight;
         waterfallCtx.fillStyle = '#050811';
         waterfallCtx.fillRect(0, 0, canvasWidth, waterfallHeight);
-        waterfallCtx.drawImage(tempCanvas, 0, 0, canvasWidth, waterfallHeight);
+        waterfallCtx.drawImage(tempSwapCanvas, 0, 0, canvasWidth, waterfallHeight);
+
+        tempSwapCanvas.width = canvasWidth;
+        tempSwapCanvas.height = waterfallHeight;
       }
 
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
 
-      function startNewUCalibration() {
-        isCalibrated = false;
-        calibrationProgress = 0;
-        calibAccumF1 = 0;
-        calibAccumF2 = 0;
-        calibSamples = 0;
-        holdDurationSec = 0;
+      function beginHoldCalibration(e) {
+        if (e && e.cancelable) e.preventDefault();
+        if (!isRunning) return;
+        isCalibratingHold = true;
+        calibrateHoldBtn.classList.add('calibrating-active');
+        calibBtnDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-300 animate-ping';
+        calibBtnText.textContent = 'КАЛИБРОВКА «У»... ОТПУСТИТЕ ДЛЯ ФИКСАЦИИ';
       }
 
-      recalibrateBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        startNewUCalibration();
-      });
+      function endHoldCalibration(e) {
+        if (!isCalibratingHold) return;
+        if (e && e.cancelable) e.preventDefault();
+        isCalibratingHold = false;
+        hasUserCalibrated = true;
+        calibrateHoldBtn.classList.remove('calibrating-active');
+        calibBtnDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]';
+        calibBtnText.textContent = 'УДЕРЖИВАЙТЕ И ШЕПЧИТЕ «У» ДЛЯ КАЛИБРОВКИ';
+      }
 
-      // Tapping anywhere on the waterfall canvas triggers a fresh "У" calibration
-      canvas.addEventListener('click', () => {
-        if (isRunning) {
-          startNewUCalibration();
-        }
-      });
+      calibrateHoldBtn.addEventListener('pointerdown', beginHoldCalibration);
+      window.addEventListener('pointerup', endHoldCalibration);
+      window.addEventListener('pointercancel', endHoldCalibration);
+      calibrateHoldBtn.addEventListener('touchstart', beginHoldCalibration, { passive: false });
+      window.addEventListener('touchend', endHoldCalibration);
 
       async function startMicrophone() {
         micErrorBox.classList.add('hidden');
@@ -349,7 +374,7 @@
           const source = audioCtx.createMediaStreamSource(stream);
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 4096;
-          analyser.smoothingTimeConstant = 0.62;
+          analyser.smoothingTimeConstant = 0.58;
 
           source.connect(analyser);
 
@@ -358,12 +383,11 @@
           smoothedEnvelope = new Float32Array(binCount);
           temporalSpectrum = new Float32Array(binCount);
           normalizedRidge = new Float32Array(binCount);
-          temporalSpectrum.fill(-100);
+          temporalSpectrum.fill(-110);
 
           startOverlay.classList.add('hidden');
           controlsBar.classList.remove('hidden');
           resizeCanvas();
-          startNewUCalibration();
 
           isRunning = true;
           lastFrameTime = performance.now();
@@ -393,32 +417,32 @@
         const sampleRate = audioCtx.sampleRate || 48000;
         const binCount = analyser.frequencyBinCount;
 
-        const minDispBin = freqToBin(MIN_DISPLAY_HZ, sampleRate, binCount);
-        const maxDispBin = freqToBin(MAX_DISPLAY_HZ, sampleRate, binCount);
+        // Analyze across full possible display range so rescaling never clips
+        const minAnBin = freqToBin(Math.min(700, displayMinHz - 200), sampleRate, binCount);
+        const maxAnBin = freqToBin(Math.max(4500, displayMaxHz + 200), sampleRate, binCount);
 
-        // 1. Temporal smoothing + high-frequency pre-emphasis so F4 (~3060 Hz) matches F3 (~2460 Hz)
-        for (let b = minDispBin; b <= maxDispBin; b++) {
+        // 1. Temporal smoothing + high-frequency tilt compensation
+        for (let b = minAnBin; b <= maxAnBin; b++) {
           let val = rawFreqData[b];
-          if (!Number.isFinite(val) || val < -120) val = -120;
+          if (!Number.isFinite(val) || val < -140) val = -140;
           const freq = binToFreq(b, sampleRate, binCount);
-          const preEmphasisDb = Math.max(0, (freq - 1500) / 1000) * 3.4;
+          const preEmphasisDb = Math.max(0, (freq - 1200) / 1000) * 3.6;
           const boosted = val + preEmphasisDb;
-          temporalSpectrum[b] = temporalSpectrum[b] * 0.58 + boosted * 0.42;
+          temporalSpectrum[b] = temporalSpectrum[b] * 0.55 + boosted * 0.45;
         }
 
-        // 2. Smooth spectral envelope across ~160 Hz to reveal formant hills
-        const halfWindowBins = Math.max(4, Math.round(80 / (sampleRate / (binCount * 2))));
+        // 2. Smooth spectral envelope across ~150 Hz to reveal formant hills even on ultra-quiet whisper
+        const halfWindowBins = Math.max(4, Math.round(75 / (sampleRate / (binCount * 2))));
         let sumEnv = 0;
         let countEnv = 0;
-        let maxEnvDb = -120;
-        let minEnvDb = 0;
+        let maxEnvDb = -160;
 
-        for (let b = minDispBin; b <= maxDispBin; b++) {
+        for (let b = minAnBin; b <= maxAnBin; b++) {
           let weightedSum = 0;
           let weightTotal = 0;
           for (let k = -halfWindowBins; k <= halfWindowBins; k++) {
             const idx = b + k;
-            if (idx >= minDispBin && idx <= maxDispBin) {
+            if (idx >= minAnBin && idx <= maxAnBin) {
               const w = halfWindowBins + 1 - Math.abs(k);
               weightedSum += temporalSpectrum[idx] * w;
               weightTotal += w;
@@ -429,48 +453,37 @@
           sumEnv += envVal;
           countEnv++;
           if (envVal > maxEnvDb) maxEnvDb = envVal;
-          if (envVal < minEnvDb) minEnvDb = envVal;
         }
 
-        const meanEnvDb = countEnv > 0 ? sumEnv / countEnv : -100;
-        const userSensitivityOffset = parseFloat(sensitivitySlider.value) || 0;
-        const absoluteGateDb = -84 - userSensitivityOffset;
-        const isWhisperPresent = maxEnvDb > absoluteGateDb && (maxEnvDb - meanEnvDb) > 2.0;
+        const meanEnvDb = countEnv > 0 ? sumEnv / countEnv : -110;
 
-        // 3. Compute Loudness-Independent Ridge Intensity (0..1) for the Waterfall
-        // Even if the user whispers very softly, local peaks are normalized to [0..1]
-        // so the waterfall shows FORMANT POSITION rather than loudness!
-        const spanRadius = Math.max(12, Math.round(320 / (sampleRate / (binCount * 2))));
-        for (let b = minDispBin; b <= maxDispBin; b++) {
-          if (!isWhisperPresent) {
-            normalizedRidge[b] = 0;
-            continue;
-          }
+        // 3. Zero-Threshold Local Ridge Normalization (0..1)
+        // Completely independent of absolute volume: even microscopic whisper ripples are normalized to [0..1]
+        const spanRadius = Math.max(12, Math.round(310 / (sampleRate / (binCount * 2))));
+        const globalSpan = Math.max(0.4, maxEnvDb - meanEnvDb);
+
+        for (let b = minAnBin; b <= maxAnBin; b++) {
           let localMin = smoothedEnvelope[b];
           let localMax = smoothedEnvelope[b];
           for (let k = -spanRadius; k <= spanRadius; k += 2) {
-            const idx = Math.max(minDispBin, Math.min(maxDispBin, b + k));
+            const idx = Math.max(minAnBin, Math.min(maxAnBin, b + k));
             const v = smoothedEnvelope[idx];
             if (v < localMin) localMin = v;
             if (v > localMax) localMax = v;
           }
-          const localRange = Math.max(2.5, localMax - localMin);
+          const localRange = Math.max(0.35, localMax - localMin);
           const localNorm = Math.max(0, Math.min(1, (smoothedEnvelope[b] - localMin) / localRange));
-          const globalNorm = Math.max(0, Math.min(1, (smoothedEnvelope[b] - meanEnvDb) / Math.max(3.5, maxEnvDb - meanEnvDb)));
-          // Sharpen the ridge with a power curve so formant tracks stand out crisply
-          normalizedRidge[b] = Math.pow(localNorm * 0.68 + globalNorm * 0.32, 1.65);
+          const globalNorm = Math.max(0, Math.min(1, (smoothedEnvelope[b] - meanEnvDb) / globalSpan));
+          normalizedRidge[b] = Math.pow(localNorm * 0.75 + globalNorm * 0.25, 1.55);
         }
 
-        if (!isWhisperPresent) {
-          return { hasSound: false, peak1: null, peak2: null };
-        }
-
+        // 4. Find the two formant peaks in the whisper region without any silence gate
         const searchStartBin = freqToBin(SEARCH_MIN_HZ, sampleRate, binCount);
         const searchEndBin = freqToBin(SEARCH_MAX_HZ, sampleRate, binCount);
         const candidates = [];
 
-        const neighborCheck = Math.max(3, Math.round(55 / (sampleRate / (binCount * 2))));
-        const prominenceRadiusBins = Math.max(10, Math.round(270 / (sampleRate / (binCount * 2))));
+        const neighborCheck = Math.max(2, Math.round(45 / (sampleRate / (binCount * 2))));
+        const prominenceRadiusBins = Math.max(10, Math.round(260 / (sampleRate / (binCount * 2))));
 
         for (let b = searchStartBin; b <= searchEndBin; b++) {
           const val = smoothedEnvelope[b];
@@ -484,29 +497,26 @@
           if (!isLocalMax) continue;
 
           let leftMin = val;
-          for (let k = b - 1; k >= Math.max(minDispBin, b - prominenceRadiusBins); k--) {
+          for (let k = b - 1; k >= Math.max(minAnBin, b - prominenceRadiusBins); k--) {
             if (smoothedEnvelope[k] < leftMin) leftMin = smoothedEnvelope[k];
           }
           let rightMin = val;
-          for (let k = b + 1; k <= Math.min(maxDispBin, b + prominenceRadiusBins); k++) {
+          for (let k = b + 1; k <= Math.min(maxAnBin, b + prominenceRadiusBins); k++) {
             if (smoothedEnvelope[k] < rightMin) rightMin = smoothedEnvelope[k];
           }
 
-          const prominence = val - Math.max(leftMin, rightMin);
+          const prominence = Math.max(0.01, val - Math.max(leftMin, rightMin));
           const heightAboveMean = val - meanEnvDb;
 
-          if (heightAboveMean > Math.max(1.5, 3.4 - userSensitivityOffset * 0.12) && prominence > 0.55) {
-            candidates.push({
-              bin: b,
-              freq: binToFreq(b, sampleRate, binCount),
-              db: val,
-              prominence,
-              heightAboveMean
-            });
-          }
+          candidates.push({
+            bin: b,
+            freq: binToFreq(b, sampleRate, binCount),
+            db: val,
+            prominence,
+            heightAboveMean
+          });
         }
 
-        // Score pairs of candidate peaks (Peak 1 = lower F3, Peak 2 = higher F4)
         let bestPair = null;
         let bestPairScore = -Infinity;
 
@@ -517,29 +527,25 @@
             const sep = p2.freq - p1.freq;
 
             if (sep < MIN_PEAK_SEPARATION_HZ || sep > MAX_PEAK_SEPARATION_HZ) continue;
-            if (p1.freq > 3180 || p2.freq < 2400) continue;
+            if (p1.freq > 3250 || p2.freq < 2300) continue;
 
             let valleyDb = Math.min(p1.db, p2.db);
             for (let b = p1.bin + 1; b < p2.bin; b++) {
               if (smoothedEnvelope[b] < valleyDb) valleyDb = smoothedEnvelope[b];
             }
-            const dipDepth = Math.min(p1.db, p2.db) - valleyDb;
-            if (dipDepth < 0.65) continue;
-
+            const dipDepth = Math.max(0, Math.min(p1.db, p2.db) - valleyDb);
             const balanceDiff = Math.abs(p1.db - p2.db);
-            if (balanceDiff > 16.5) continue;
 
-            // Gentle continuity bonus near previously detected peaks so tracks don't jump erratically
             const contDist = Math.abs(p1.freq - smoothPeak1Hz) + Math.abs(p2.freq - smoothPeak2Hz);
-            const continuityBonus = Math.max(0, 4.5 - contDist / 260);
+            const continuityBonus = Math.max(0, 5.0 - contDist / 240);
 
             const score =
-              p1.prominence * 1.8 +
-              p2.prominence * 1.8 +
-              p1.heightAboveMean * 1.1 +
-              p2.heightAboveMean * 1.1 +
-              dipDepth * 2.2 -
-              balanceDiff * 0.25 +
+              p1.prominence * 2.2 +
+              p2.prominence * 2.2 +
+              p1.heightAboveMean * 1.2 +
+              p2.heightAboveMean * 1.2 +
+              dipDepth * 2.4 -
+              balanceDiff * 0.2 +
               continuityBonus;
 
             if (score > bestPairScore) {
@@ -550,238 +556,221 @@
         }
 
         if (bestPair) {
-          return { hasSound: true, peak1: bestPair.p1, peak2: bestPair.p2 };
+          return { peak1: bestPair.p1, peak2: bestPair.p2 };
         }
 
-        if (candidates.length > 0) {
-          candidates.sort((a, b) => b.prominence - a.prominence);
-          const strongest = candidates[0];
-          const midBoundary = (refF1 + refF2) * 0.5;
-          if (strongest.freq <= midBoundary) {
-            return { hasSound: true, peak1: strongest, peak2: null };
-          } else {
-            return { hasSound: true, peak1: null, peak2: strongest };
+        // Fallback if only one local peak was found: pick highest ridge in lower & upper sub-bands
+        const midSplitHz = (refF1 + refF2) * 0.5;
+        const midBin = freqToBin(midSplitHz, sampleRate, binCount);
+
+        let bestLowBin = searchStartBin;
+        let bestLowVal = -Infinity;
+        for (let b = searchStartBin; b <= midBin; b++) {
+          if (normalizedRidge[b] > bestLowVal) {
+            bestLowVal = normalizedRidge[b];
+            bestLowBin = b;
           }
         }
 
-        return { hasSound: true, peak1: null, peak2: null };
+        let bestHighBin = Math.min(searchEndBin, midBin + 1);
+        let bestHighVal = -Infinity;
+        for (let b = bestHighBin; b <= searchEndBin; b++) {
+          if (normalizedRidge[b] > bestHighVal) {
+            bestHighVal = normalizedRidge[b];
+            bestHighBin = b;
+          }
+        }
+
+        return {
+          peak1: { freq: binToFreq(bestLowBin, sampleRate, binCount) },
+          peak2: { freq: binToFreq(bestHighBin, sampleRate, binCount) }
+        };
       }
 
-      function formatDrift(diffHz) {
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function lerpRGB(c1, c2, t) {
+        const clamped = Math.max(0, Math.min(1, t));
+        return [
+          Math.round(lerp(c1[0], c2[0], clamped)),
+          Math.round(lerp(c1[1], c2[1], clamped)),
+          Math.round(lerp(c1[2], c2[2], clamped))
+        ];
+      }
+
+      // Smooth directional color based on signed frequency deviation (diffHz = currentHz - refHz)
+      // 0 Hz -> Emerald Green [16, 185, 129]
+      // Negative (Left / lower freq) -> Cyan [6, 182, 212] -> Blue [59, 130, 246] -> Violet [168, 85, 247]
+      // Positive (Right / higher freq) -> Amber [251, 191, 36] -> Orange [249, 115, 22] -> Rose Red [244, 63, 94]
+      function getDeviationRGB(diffHz) {
+        const green = [16, 185, 129];
+        const maxScaleHz = 360; // Full color saturation at ±360 Hz
+
+        if (diffHz < 0) {
+          const norm = Math.min(1, Math.abs(diffHz) / maxScaleHz);
+          const cyan = [6, 182, 212];
+          const blue = [59, 130, 246];
+          const violet = [168, 85, 247];
+
+          if (norm < 0.35) {
+            return lerpRGB(green, cyan, norm / 0.35);
+          } else if (norm < 0.7) {
+            return lerpRGB(cyan, blue, (norm - 0.35) / 0.35);
+          } else {
+            return lerpRGB(blue, violet, (norm - 0.7) / 0.3);
+          }
+        } else {
+          const norm = Math.min(1, diffHz / maxScaleHz);
+          const amber = [251, 191, 36];
+          const orange = [249, 115, 22];
+          const rose = [244, 63, 94];
+
+          if (norm < 0.35) {
+            return lerpRGB(green, amber, norm / 0.35);
+          } else if (norm < 0.7) {
+            return lerpRGB(amber, orange, (norm - 0.35) / 0.35);
+          } else {
+            return lerpRGB(orange, rose, (norm - 0.7) / 0.3);
+          }
+        }
+      }
+
+      function rgbToCss(rgb, alpha = 1) {
+        if (alpha < 1) {
+          return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+        }
+        return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+      }
+
+      function formatSignedDrift(diffHz) {
         const rounded = Math.round(diffHz);
-        if (Math.abs(rounded) <= 25) return 'в центре «У»';
-        return (rounded > 0 ? `+${rounded}` : `${rounded}`) + ' Гц';
+        if (Math.abs(rounded) <= 8) return '0 Гц (эталон)';
+        if (rounded < 0) return `← ${rounded} Гц`;
+        return `+${rounded} Гц →`;
       }
 
       function updateStateAndUI(analysis, dt) {
-        const hasP1 = Boolean(analysis.peak1);
-        const hasP2 = Boolean(analysis.peak2);
-
-        if (hasP1) {
-          smoothPeak1Hz = smoothPeak1Hz * 0.68 + analysis.peak1.freq * 0.32;
-          peak1Confidence = Math.min(1, peak1Confidence + dt * 6.0);
-        } else {
-          peak1Confidence = Math.max(0, peak1Confidence - dt * 4.2);
+        if (analysis.peak1) {
+          smoothPeak1Hz = smoothPeak1Hz * 0.70 + analysis.peak1.freq * 0.30;
+        }
+        if (analysis.peak2) {
+          smoothPeak2Hz = smoothPeak2Hz * 0.70 + analysis.peak2.freq * 0.30;
         }
 
-        if (hasP2) {
-          smoothPeak2Hz = smoothPeak2Hz * 0.68 + analysis.peak2.freq * 0.32;
-          peak2Confidence = Math.min(1, peak2Confidence + dt * 6.0);
-        } else {
-          peak2Confidence = Math.max(0, peak2Confidence - dt * 4.2);
+        // Ensure peak1 < peak2
+        if (smoothPeak1Hz > smoothPeak2Hz - 220) {
+          const mid = (smoothPeak1Hz + smoothPeak2Hz) * 0.5;
+          smoothPeak1Hz = mid - 150;
+          smoothPeak2Hz = mid + 150;
         }
 
-        // Automatic calibration on first whispered vowel ("У")
-        if (!isCalibrated) {
-          if (hasP1 && hasP2) {
-            calibrationProgress = Math.min(1, calibrationProgress + dt * 1.35);
-            calibAccumF1 += smoothPeak1Hz;
-            calibAccumF2 += smoothPeak2Hz;
-            calibSamples++;
+        // If the user is holding down the calibration button, adapt refF1, refF2 and screen window live!
+        if (isCalibratingHold) {
+          const adaptRate = Math.min(1, dt * 6.5);
+          refF1 = lerp(refF1, smoothPeak1Hz, adaptRate);
+          refF2 = lerp(refF2, smoothPeak2Hz, adaptRate);
 
-            refF1 = calibAccumF1 / calibSamples;
-            refF2 = calibAccumF2 / calibSamples;
-
-            praiseCard.className =
-              'w-full rounded-2xl bg-cyan-950/60 border border-cyan-500/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
-            statusOrb.className = 'w-4 h-4 rounded-full bg-cyan-400 shadow-[0_0_12px_#22d3ee] shrink-0';
-            praiseTitle.textContent = `Фиксация эталона «У»... ${Math.round(calibrationProgress * 100)}%`;
-            praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-cyan-200 truncate';
-            praiseSubtitle.textContent = `Удерживайте шёпот «У»: ~${Math.round(refF1)} и ~${Math.round(refF2)} Гц`;
-            praiseSubtitle.className = 'text-xs sm:text-sm text-cyan-300/80 truncate';
-
-            if (calibrationProgress >= 1 && calibSamples >= 8) {
-              isCalibrated = true;
-              graceTimer = 0.3;
-            }
-          } else {
-            calibrationProgress = Math.max(0, calibrationProgress - dt * 0.8);
-            praiseCard.className =
-              'w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-3.5 py-2.5 flex items-center justify-between transition-all duration-300';
-            statusOrb.className = 'w-4 h-4 rounded-full bg-amber-400 shrink-0 animate-pulse';
-            praiseTitle.textContent = 'Шаг 1: Прошепчите эталонную «У»';
-            praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-amber-200 truncate';
-            praiseSubtitle.textContent = 'Программа запомнит положение ваших двух формант на «У»';
-            praiseSubtitle.className = 'text-xs sm:text-sm text-slate-400 truncate';
-          }
+          const targetWin = computeWindowForRefs(refF1, refF2);
+          targetDisplayMinHz = targetWin.minHz;
+          targetDisplayMaxHz = targetWin.maxHz;
         }
 
-        // Check position stability relative to the locked "У" rails
         const diff1 = smoothPeak1Hz - refF1;
         const diff2 = smoothPeak2Hz - refF2;
-        const inRail1 = peak1Confidence > 0.35 && Math.abs(diff1) <= RAIL_TOLERANCE_HZ;
-        const inRail2 = peak2Confidence > 0.35 && Math.abs(diff2) <= RAIL_TOLERANCE_HZ;
 
-        const refSpread = refF2 - refF1;
-        const currentSpread = smoothPeak2Hz - smoothPeak1Hz;
-        const spreadDelta = currentSpread - refSpread;
+        const rgb1 = getDeviationRGB(diff1);
+        const rgb2 = getDeviationRGB(diff2);
+        const css1 = rgbToCss(rgb1);
+        const css2 = rgbToCss(rgb2);
 
-        if (isCalibrated && inRail1 && inRail2) {
-          graceTimer = 0.25; // Smooth across quick consonants
+        // Continuous proximity score (1.0 when both are dead-on refF1 & refF2, tapering smoothly)
+        const score1 = Math.exp(-Math.pow(diff1 / 210, 2));
+        const score2 = Math.exp(-Math.pow(diff2 / 210, 2));
+        const instantScore = (score1 + score2) * 0.5;
+        smoothAlignmentScore = lerp(smoothAlignmentScore, instantScore, Math.min(1, dt * 5.0));
+
+        const pct = Math.round(smoothAlignmentScore * 100);
+        holdTimerEl.textContent = `${pct}%`;
+
+        const avgDrift = (Math.abs(diff1) + Math.abs(diff2)) * 0.5;
+        const avgRGB = getDeviationRGB(Math.abs(diff1) > Math.abs(diff2) ? diff1 : diff2);
+        holdTimerEl.style.color = rgbToCss(avgRGB);
+
+        // Update Pill 1 (1st Formant - Middle-Right)
+        valF1.textContent = `${Math.round(smoothPeak1Hz)} Гц`;
+        valF1.style.color = css1;
+        driftF1.textContent = formatSignedDrift(diff1);
+        driftF1.style.color = css1;
+        pillF1.style.borderColor = rgbToCss(rgb1, 0.55);
+        pillF1.style.backgroundColor = rgbToCss(rgb1, 0.10);
+
+        // Update Pill 2 (2nd Formant - Far-Right)
+        valF2.textContent = `${Math.round(smoothPeak2Hz)} Гц`;
+        valF2.style.color = css2;
+        driftF2.textContent = formatSignedDrift(diff2);
+        driftF2.style.color = css2;
+        pillF2.style.borderColor = rgbToCss(rgb2, 0.55);
+        pillF2.style.backgroundColor = rgbToCss(rgb2, 0.10);
+
+        // Update Left Reserve / Spread Pill
+        const ghostHz = Math.round(refF1 - (refF2 - refF1));
+        leftSlotHz.textContent = `~${ghostHz} Гц`;
+        const spreadDelta = Math.round((smoothPeak2Hz - smoothPeak1Hz) - (refF2 - refF1));
+        if (Math.abs(spreadDelta) <= 20) {
+          valSpread.textContent = `Δ ${Math.round(smoothPeak2Hz - smoothPeak1Hz)} Гц (ровно)`;
+          valSpread.style.color = '#34d399';
+        } else if (spreadDelta > 0) {
+          valSpread.textContent = `← +${spreadDelta} Гц шире →`;
+          valSpread.style.color = '#fbbf24';
         } else {
-          graceTimer = Math.max(0, graceTimer - dt);
+          valSpread.textContent = `→ ${spreadDelta} Гц уже ←`;
+          valSpread.style.color = '#38bdf8';
         }
 
-        const isMountedInU = isCalibrated && ((inRail1 && inRail2) || graceTimer > 0);
-        const isSpreadingApart =
-          isCalibrated &&
-          peak1Confidence > 0.35 &&
-          peak2Confidence > 0.35 &&
-          (!inRail1 || !inRail2);
+        // Update Top Praise Banner continuously
+        statusOrb.style.backgroundColor = rgbToCss(avgRGB);
+        statusOrb.style.boxShadow = `0 0 14px ${rgbToCss(avgRGB)}`;
 
-        // Update Pill 1 (F3)
-        if (peak1Confidence > 0.35) {
-          valF1.textContent = `${Math.round(smoothPeak1Hz)} Гц`;
-          driftF1.textContent = isCalibrated ? formatDrift(diff1) : 'захват...';
-          if (!isCalibrated || inRail1) {
-            valF1.className = 'mono text-xs sm:text-sm font-bold text-cyan-300 mt-0.5';
-            driftF1.className = 'mono text-[10px] font-bold text-emerald-400';
-            pillF1.className = 'rounded-xl bg-cyan-950/40 border border-cyan-500/50 px-2.5 py-1.5 flex flex-col justify-between';
+        if (isCalibratingHold) {
+          appShell.classList.add('praise-active');
+          praiseCard.style.borderColor = 'rgba(34, 211, 238, 0.75)';
+          praiseTitle.textContent = 'Подстройка экрана под вашу «У»...';
+          praiseTitle.style.color = '#67e8f9';
+          praiseSubtitle.textContent = `Эталоны справа: ${Math.round(refF1)} Гц и ${Math.round(refF2)} Гц (отпустите кнопку для фиксации)`;
+        } else if (avgDrift < 65) {
+          appShell.classList.add('praise-active');
+          praiseCard.style.borderColor = rgbToCss(avgRGB, 0.65);
+          praiseTitle.textContent = 'Идеально! Обе линии изумрудные в центре «У» ✨';
+          praiseTitle.style.color = '#6ee7b7';
+          praiseSubtitle.textContent = `Гласная собрана точно по осям ${Math.round(refF1)} и ${Math.round(refF2)} Гц`;
+        } else if (avgDrift < 145) {
+          appShell.classList.remove('praise-active');
+          praiseCard.style.borderColor = rgbToCss(avgRGB, 0.45);
+          praiseTitle.textContent = 'Хорошо! Небольшой оттенок смещения от «У»';
+          praiseTitle.style.color = rgbToCss(avgRGB);
+          praiseSubtitle.textContent = 'Ориентируйтесь по цвету линий: возвращайте обе к зелёному';
+        } else {
+          appShell.classList.remove('praise-active');
+          praiseCard.style.borderColor = rgbToCss(avgRGB, 0.55);
+          if (diff1 < -90 && diff2 > 90) {
+            praiseTitle.textContent = 'Линии разъехались (левая синеет, правая краснеет)';
+          } else if (diff1 < -90 && diff2 < -90) {
+            praiseTitle.textContent = 'Обе форманты ушли влево (в холодный синий цвет)';
+          } else if (diff1 > 90 && diff2 > 90) {
+            praiseTitle.textContent = 'Обе форманты ушли вправо (в тёплый красный цвет)';
           } else {
-            valF1.className = 'mono text-xs sm:text-sm font-bold text-rose-300 mt-0.5';
-            driftF1.className = 'mono text-[10px] font-bold text-rose-400';
-            pillF1.className = 'rounded-xl bg-rose-950/40 border border-rose-500/50 px-2.5 py-1.5 flex flex-col justify-between';
+            praiseTitle.textContent = 'Плавное отклонение от осей «У» — соберите звук';
           }
-        } else {
-          valF1.textContent = `У: ${Math.round(refF1)} Гц`;
-          valF1.className = 'mono text-xs sm:text-sm font-bold text-slate-500 mt-0.5';
-          driftF1.textContent = 'нет пика';
-          driftF1.className = 'mono text-[10px] font-bold text-slate-600';
-          pillF1.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between';
+          praiseTitle.style.color = rgbToCss(avgRGB);
+          praiseSubtitle.textContent = `1-я: ${formatSignedDrift(diff1)} | 2-я: ${formatSignedDrift(diff2)}`;
         }
 
-        // Update Pill 2 (F4)
-        if (peak2Confidence > 0.35) {
-          valF2.textContent = `${Math.round(smoothPeak2Hz)} Гц`;
-          driftF2.textContent = isCalibrated ? formatDrift(diff2) : 'захват...';
-          if (!isCalibrated || inRail2) {
-            valF2.className = 'mono text-xs sm:text-sm font-bold text-amber-300 mt-0.5';
-            driftF2.className = 'mono text-[10px] font-bold text-emerald-400';
-            pillF2.className = 'rounded-xl bg-amber-950/40 border border-amber-500/50 px-2.5 py-1.5 flex flex-col justify-between';
-          } else {
-            valF2.className = 'mono text-xs sm:text-sm font-bold text-rose-300 mt-0.5';
-            driftF2.className = 'mono text-[10px] font-bold text-rose-400';
-            pillF2.className = 'rounded-xl bg-rose-950/40 border border-rose-500/50 px-2.5 py-1.5 flex flex-col justify-between';
-          }
-        } else {
-          valF2.textContent = `У: ${Math.round(refF2)} Гц`;
-          valF2.className = 'mono text-xs sm:text-sm font-bold text-slate-500 mt-0.5';
-          driftF2.textContent = 'нет пика';
-          driftF2.className = 'mono text-[10px] font-bold text-slate-600';
-          pillF2.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between';
-        }
-
-        // Update Center Spread Pill
-        if (!isCalibrated) {
-          valSpread.textContent = 'Ждём «У»...';
-          valSpread.className = 'mono text-xs sm:text-sm font-bold text-amber-300 mt-0.5';
-          pillSpread.className = 'rounded-xl bg-slate-900/75 border border-amber-500/40 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
-        } else if (isMountedInU) {
-          valSpread.textContent = 'В РАМКЕ «У» ✨';
-          valSpread.className = 'mono text-xs sm:text-sm font-bold text-emerald-300 mt-0.5';
-          pillSpread.className = 'rounded-xl bg-emerald-950/50 border border-emerald-500/60 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
-        } else if (isSpreadingApart) {
-          valSpread.textContent = spreadDelta > 0 ? '← РАЗЪЕХАЛИСЬ →' : '→ СЖАЛИСЬ ←';
-          valSpread.className = 'mono text-xs sm:text-sm font-bold text-rose-300 mt-0.5';
-          pillSpread.className = 'rounded-xl bg-rose-950/50 border border-rose-500/60 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
-        } else {
-          valSpread.textContent = `Δ ${Math.round(refSpread)} Гц`;
-          valSpread.className = 'mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5';
-          pillSpread.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
-        }
-
-        // Update Top Praise Banner when Calibrated
-        if (isCalibrated) {
-          if (isMountedInU) {
-            holdDurationSec += dt;
-            praiseLevel = Math.min(1, praiseLevel + dt * 4);
-            appShell.classList.add('praise-active');
-
-            praiseCard.className =
-              'w-full rounded-2xl bg-emerald-950/75 border border-emerald-500/70 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200 shadow-lg shadow-emerald-950/50';
-            statusOrb.className = 'w-4 h-4 rounded-full bg-emerald-400 shadow-[0_0_14px_#10b981] shrink-0';
-
-            if (holdDurationSec < 1.8) {
-              praiseTitle.textContent = 'Отлично! Гласная вмонтирована в «У» ✨';
-            } else if (holdDurationSec < 4.5) {
-              praiseTitle.textContent = 'Браво! Форманты стоят в рельсах «У» 🔥';
-            } else {
-              praiseTitle.textContent = 'Мастерски! Все гласные в едином куполе «У» 👑';
-            }
-            praiseTitle.className = 'text-sm sm:text-lg font-extrabold tracking-tight text-emerald-300 truncate';
-            praiseSubtitle.textContent = `Обе форманты стабильны внутри коридоров ${Math.round(refF1)} и ${Math.round(refF2)} Гц`;
-            praiseSubtitle.className = 'text-xs sm:text-sm text-emerald-200/80 truncate';
-          } else {
-            holdDurationSec = Math.max(0, holdDurationSec - dt * 1.4);
-            praiseLevel = Math.max(0, praiseLevel - dt * 3);
-            appShell.classList.remove('praise-active');
-
-            if (isSpreadingApart) {
-              praiseCard.className =
-                'w-full rounded-2xl bg-rose-950/60 border border-rose-500/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
-              statusOrb.className = 'w-4 h-4 rounded-full bg-rose-400 shadow-[0_0_12px_#f43f5e] shrink-0';
-              praiseTitle.textContent = 'Форманты разъехались! Соберите гласную в «У»';
-              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-rose-200 truncate';
-              praiseSubtitle.textContent = 'Сохраняйте ощущение «У» в глотке при смене гласной';
-              praiseSubtitle.className = 'text-xs sm:text-sm text-rose-300/80 truncate';
-            } else if (peak1Confidence > 0.4 && peak2Confidence <= 0.4) {
-              praiseCard.className =
-                'w-full rounded-2xl bg-cyan-950/40 border border-cyan-700/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
-              statusOrb.className = 'w-4 h-4 rounded-full bg-cyan-400 shrink-0';
-              praiseTitle.textContent = 'Потерялась 2-я форманта — верните блеск «У»';
-              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-cyan-200 truncate';
-              praiseSubtitle.textContent = `Нужен второй пик в коридоре ~${Math.round(refF2)} Гц`;
-              praiseSubtitle.className = 'text-xs sm:text-sm text-cyan-300/75 truncate';
-            } else if (peak2Confidence > 0.4 && peak1Confidence <= 0.4) {
-              praiseCard.className =
-                'w-full rounded-2xl bg-amber-950/40 border border-amber-700/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
-              statusOrb.className = 'w-4 h-4 rounded-full bg-amber-400 shrink-0';
-              praiseTitle.textContent = 'Потерялась 1-я форманта — верните купол «У»';
-              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-amber-200 truncate';
-              praiseSubtitle.textContent = `Удерживайте объём в коридоре ~${Math.round(refF1)} Гц`;
-              praiseSubtitle.className = 'text-xs sm:text-sm text-amber-300/75 truncate';
-            } else {
-              praiseCard.className =
-                'w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-3.5 py-2.5 flex items-center justify-between transition-all duration-300';
-              statusOrb.className = 'w-4 h-4 rounded-full bg-slate-600 shrink-0';
-              praiseTitle.textContent = 'Шепчите гласные внутрь рельсов «У»...';
-              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-slate-200 truncate';
-              praiseSubtitle.textContent = 'Следите по водопаду, чтобы дорожки шли ровно вниз';
-              praiseSubtitle.className = 'text-xs sm:text-sm text-slate-400 truncate';
-            }
-          }
-        }
-
-        holdTimerEl.textContent = `${holdDurationSec.toFixed(1)} с`;
-
-        // Push current formant positions into the vertical waterfall trajectory buffer
+        // Push current formant positions (in Hz) into the trajectory buffer
         trackHistory.unshift({
-          f1: peak1Confidence > 0.35 ? smoothPeak1Hz : null,
-          f2: peak2Confidence > 0.35 ? smoothPeak2Hz : null,
-          in1: inRail1,
-          in2: inRail2,
-          mounted: isMountedInU,
-          spreading: isSpreadingApart
+          f1: smoothPeak1Hz,
+          f2: smoothPeak2Hz
         });
 
         const maxRows = Math.ceil(waterfallHeight / WATERFALL_SPEED_PX) + 2;
@@ -791,75 +780,76 @@
       }
 
       function freqToX(hz, width) {
-        return ((hz - MIN_DISPLAY_HZ) / (MAX_DISPLAY_HZ - MIN_DISPLAY_HZ)) * width;
+        return ((hz - displayMinHz) / (displayMaxHz - displayMinHz)) * width;
       }
 
       function xToFreq(x, width) {
-        return MIN_DISPLAY_HZ + (x / width) * (MAX_DISPLAY_HZ - MIN_DISPLAY_HZ);
+        return displayMinHz + (x / width) * (displayMaxHz - displayMinHz);
       }
 
-      // Colormap turning normalized ridge intensity [0..1] into vivid thermal/aurora colors
+      // Color map for the background waterfall ridges:
+      // Tints every frequency pixel according to its proximity and direction relative to the nearest reference axis
       function ridgeColorRGB(intensity, freqHz) {
-        if (intensity <= 0.04) {
+        if (intensity <= 0.03) {
           return [5, 8, 17];
         }
-        // Tint lower formant zone toward cyan/emerald and upper formant zone toward gold/magenta
-        const midHz = (refF1 + refF2) * 0.5;
-        const isUpperZone = freqHz > midHz;
 
-        if (intensity < 0.35) {
-          const t = intensity / 0.35;
+        const midBoundary = (refF1 + refF2) * 0.5;
+        const leftBoundary = refF1 - (refF2 - refF1) * 0.55;
+
+        let localDiff = 0;
+        if (freqHz < leftBoundary) {
+          // Far-left reserve slot region: subtle cool slate-indigo tint
+          const t = Math.pow(intensity, 1.15);
           return [
-            Math.round(8 + t * 18),
-            Math.round(14 + t * 42),
-            Math.round(30 + t * 85)
+            Math.round(6 + t * 55),
+            Math.round(10 + t * 85),
+            Math.round(22 + t * 155)
           ];
-        } else if (intensity < 0.7) {
-          const t = (intensity - 0.35) / 0.35;
-          if (!isUpperZone) {
-            return [
-              Math.round(26 - t * 6),
-              Math.round(56 + t * 145),
-              Math.round(115 + t * 120)
-            ];
-          } else {
-            return [
-              Math.round(40 + t * 195),
-              Math.round(50 + t * 115),
-              Math.round(110 - t * 65)
-            ];
-          }
+        } else if (freqHz <= midBoundary) {
+          localDiff = freqHz - refF1;
         } else {
-          const t = (intensity - 0.7) / 0.3;
-          if (!isUpperZone) {
-            return [
-              Math.round(20 + t * 215),
-              Math.round(201 + t * 54),
-              Math.round(235 + t * 20)
-            ];
-          } else {
-            return [
-              Math.round(235 + t * 20),
-              Math.round(165 + t * 85),
-              Math.round(45 + t * 165)
-            ];
-          }
+          localDiff = freqHz - refF2;
+        }
+
+        const targetRGB = getDeviationRGB(localDiff);
+        const deepBg = [6, 10, 20];
+        const brightCore = [
+          Math.min(255, targetRGB[0] + 65),
+          Math.min(255, targetRGB[1] + 65),
+          Math.min(255, targetRGB[2] + 65)
+        ];
+
+        if (intensity < 0.65) {
+          return lerpRGB(deepBg, targetRGB, intensity / 0.65);
+        } else {
+          return lerpRGB(targetRGB, brightCore, (intensity - 0.65) / 0.35);
         }
       }
 
-      function stepWaterfallBitmap() {
+      function stepWaterfallBitmap(prevMinHz, prevMaxHz) {
         const w = waterfallCanvas.width;
         const h = waterfallCanvas.height;
         if (w <= 0 || h <= 0) return;
 
-        // 1. Shift existing waterfall down by WATERFALL_SPEED_PX pixels
+        // 1. Copy current waterfall to swap canvas and re-project horizontally if displayMinHz/displayMaxHz changed
+        tempSwapCtx.clearRect(0, 0, w, h);
+        tempSwapCtx.drawImage(waterfallCanvas, 0, 0);
+
+        waterfallCtx.fillStyle = '#050811';
+        waterfallCtx.fillRect(0, 0, w, h);
+
+        const destX1 = freqToX(prevMinHz, w);
+        const destX2 = freqToX(prevMaxHz, w);
+        const destW = destX2 - destX1;
+
         waterfallCtx.drawImage(
-          waterfallCanvas,
+          tempSwapCanvas,
           0, 0, w, h - WATERFALL_SPEED_PX,
-          0, WATERFALL_SPEED_PX, w, h - WATERFALL_SPEED_PX
+          destX1, WATERFALL_SPEED_PX, destW, h - WATERFALL_SPEED_PX
         );
 
-        // 2. Render new top row (height = WATERFALL_SPEED_PX) from loudness-normalized ridge
+        // 2. Render new top row (height = WATERFALL_SPEED_PX) from zero-threshold normalized ridge
         const sampleRate = audioCtx ? audioCtx.sampleRate : 48000;
         const binCount = analyser ? analyser.frequencyBinCount : 2048;
         const rowImg = waterfallCtx.createImageData(w, WATERFALL_SPEED_PX);
@@ -887,15 +877,22 @@
         waterfallCtx.putImageData(rowImg, 0, 0);
       }
 
-      function drawVisualizer() {
+      function drawVisualizer(dt) {
         const w = canvasWidth;
         const h = canvasHeight;
         const wfTop = TOP_SOCKET_BAR_HEIGHT;
 
+        // Smoothly interpolate display frequency window (especially active while holding calibration button)
+        const prevMinHz = displayMinHz;
+        const prevMaxHz = displayMaxHz;
+        const winLerp = Math.min(1, dt * 8.5);
+        displayMinHz = lerp(displayMinHz, targetDisplayMinHz, winLerp);
+        displayMaxHz = lerp(displayMaxHz, targetDisplayMaxHz, winLerp);
+
         ctx.clearRect(0, 0, w, h);
 
-        // 1. Update and draw scrolling offscreen waterfall bitmap
-        stepWaterfallBitmap();
+        // 1. Update and draw scrolling waterfall bitmap with horizontal scale lock
+        stepWaterfallBitmap(prevMinHz, prevMaxHz);
         ctx.drawImage(waterfallCanvas, 0, wfTop, w, waterfallHeight);
 
         // 2. Draw vertical frequency grid lines
@@ -903,114 +900,79 @@
         ctx.font = '500 10px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
 
-        for (let freq = 1500; freq <= 4000; freq += 500) {
+        const startGridHz = Math.ceil(displayMinHz / 500) * 500;
+        for (let freq = startGridHz; freq <= displayMaxHz; freq += 500) {
           const x = freqToX(freq, w);
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.10)';
           ctx.beginPath();
           ctx.moveTo(x, wfTop);
           ctx.lineTo(x, h);
           ctx.stroke();
 
-          ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
-          ctx.fillText(`${(freq / 1000).toFixed(1)}k`, x, h - 42);
+          ctx.fillStyle = 'rgba(148, 163, 184, 0.42)';
+          ctx.fillText(`${(freq / 1000).toFixed(1)}k`, x, h - 54);
         }
 
-        // 3. Draw the Two Vertical "У" Reference Rails running down the entire waterfall
+        // 3. Draw the Ghost Reserve Slot on the Left + Two Active Reference Axes on the Right
+        // No hard boundary boxes — each slot is a soft glowing center reference line
+        const ghostHz = refF1 - (refF2 - refF1);
+        const ghostX = freqToX(ghostHz, w);
         const f1CenterX = freqToX(refF1, w);
-        const f1LeftX = freqToX(refF1 - RAIL_TOLERANCE_HZ, w);
-        const f1RightX = freqToX(refF1 + RAIL_TOLERANCE_HZ, w);
-
         const f2CenterX = freqToX(refF2, w);
-        const f2LeftX = freqToX(refF2 - RAIL_TOLERANCE_HZ, w);
-        const f2RightX = freqToX(refF2 + RAIL_TOLERANCE_HZ, w);
 
-        // Subtle tunnel fill for Rail 1 ("У" F3) & Rail 2 ("У" F4)
-        ctx.fillStyle = isCalibrated ? 'rgba(34, 211, 238, 0.07)' : 'rgba(34, 211, 238, 0.03)';
-        ctx.fillRect(f1LeftX, wfTop, f1RightX - f1LeftX, waterfallHeight);
-
-        ctx.fillStyle = isCalibrated ? 'rgba(251, 191, 36, 0.07)' : 'rgba(251, 191, 36, 0.03)';
-        ctx.fillRect(f2LeftX, wfTop, f2RightX - f2LeftX, waterfallHeight);
-
-        // Vertical rail boundary lines
         ctx.save();
-        ctx.setLineDash(isCalibrated ? [6, 5] : [3, 6]);
-        ctx.lineWidth = 1.5;
-
-        ctx.strokeStyle = isCalibrated ? 'rgba(34, 211, 238, 0.55)' : 'rgba(34, 211, 238, 0.3)';
-        ctx.beginPath();
-        ctx.moveTo(f1LeftX, wfTop);
-        ctx.lineTo(f1LeftX, h);
-        ctx.moveTo(f1RightX, wfTop);
-        ctx.lineTo(f1RightX, h);
-        ctx.stroke();
-
-        ctx.strokeStyle = isCalibrated ? 'rgba(251, 191, 36, 0.55)' : 'rgba(251, 191, 36, 0.3)';
-        ctx.beginPath();
-        ctx.moveTo(f2LeftX, wfTop);
-        ctx.lineTo(f2LeftX, h);
-        ctx.moveTo(f2RightX, wfTop);
-        ctx.lineTo(f2RightX, h);
-        ctx.stroke();
-
-        // Center hairline of each "У" rail
-        ctx.setLineDash([2, 4]);
+        // Left reserve slot axis (dashed subtle guide)
+        ctx.setLineDash([4, 6]);
         ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(34, 211, 238, 0.35)';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        ctx.beginPath();
+        ctx.moveTo(ghostX, wfTop);
+        ctx.lineTo(ghostX, h);
+        ctx.stroke();
+
+        // Active Reference Axis 1 & 2 (soft emerald centerlines without boundary walls)
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = isCalibratingHold ? 'rgba(34, 211, 238, 0.75)' : 'rgba(16, 185, 129, 0.45)';
         ctx.beginPath();
         ctx.moveTo(f1CenterX, wfTop);
         ctx.lineTo(f1CenterX, h);
-        ctx.stroke();
-
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
-        ctx.beginPath();
         ctx.moveTo(f2CenterX, wfTop);
         ctx.lineTo(f2CenterX, h);
         ctx.stroke();
         ctx.restore();
 
-        // 4. Overlay high-contrast Formant Center Trajectories & Green Lock Ribbon
+        // 4. Overlay Continuous Color-Shifting Formant Trajectories
         if (trackHistory.length > 1) {
-          // Horizontal emerald rungs when both formants are mounted inside the "У" rails
-          for (let i = 0; i < trackHistory.length; i++) {
-            const pt = trackHistory[i];
-            const y = wfTop + i * WATERFALL_SPEED_PX;
-            if (pt.f1 !== null && pt.f2 !== null) {
-              const x1 = freqToX(pt.f1, w);
-              const x2 = freqToX(pt.f2, w);
-              if (pt.mounted) {
-                ctx.fillStyle = 'rgba(16, 185, 129, 0.16)';
-                ctx.fillRect(x1, y, x2 - x1, WATERFALL_SPEED_PX);
-              } else if (pt.spreading) {
-                ctx.fillStyle = 'rgba(244, 63, 94, 0.12)';
-                ctx.fillRect(x1, y, x2 - x1, WATERFALL_SPEED_PX);
-              }
-            }
-          }
-
-          // Crisp F1 Center Spine
-          ctx.lineWidth = 2.8;
+          ctx.lineWidth = 3.2;
+          ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
+
           for (let i = 1; i < trackHistory.length; i++) {
             const prev = trackHistory[i - 1];
             const curr = trackHistory[i];
-            if (prev.f1 !== null && curr.f1 !== null) {
-              ctx.strokeStyle = (!isCalibrated || curr.in1) ? '#22d3ee' : '#fb7185';
-              ctx.beginPath();
-              ctx.moveTo(freqToX(prev.f1, w), wfTop + (i - 1) * WATERFALL_SPEED_PX);
-              ctx.lineTo(freqToX(curr.f1, w), wfTop + i * WATERFALL_SPEED_PX);
-              ctx.stroke();
-            }
-            if (prev.f2 !== null && curr.f2 !== null) {
-              ctx.strokeStyle = (!isCalibrated || curr.in2) ? '#fbbf24' : '#fb7185';
-              ctx.beginPath();
-              ctx.moveTo(freqToX(prev.f2, w), wfTop + (i - 1) * WATERFALL_SPEED_PX);
-              ctx.lineTo(freqToX(curr.f2, w), wfTop + i * WATERFALL_SPEED_PX);
-              ctx.stroke();
-            }
+            const y0 = wfTop + (i - 1) * WATERFALL_SPEED_PX;
+            const y1 = wfTop + i * WATERFALL_SPEED_PX;
+
+            // 1st Formant Trajectory colored smoothly by signed deviation from refF1
+            const c1 = getDeviationRGB(curr.f1 - refF1);
+            ctx.strokeStyle = rgbToCss(c1);
+            ctx.beginPath();
+            ctx.moveTo(freqToX(prev.f1, w), y0);
+            ctx.lineTo(freqToX(curr.f1, w), y1);
+            ctx.stroke();
+
+            // 2nd Formant Trajectory colored smoothly by signed deviation from refF2
+            const c2 = getDeviationRGB(curr.f2 - refF2);
+            ctx.strokeStyle = rgbToCss(c2);
+            ctx.beginPath();
+            ctx.moveTo(freqToX(prev.f2, w), y0);
+            ctx.lineTo(freqToX(curr.f2, w), y1);
+            ctx.stroke();
           }
         }
 
-        // 5. Draw Top Socket Header ("Пазы эталонной «У»") above the waterfall
+        // 5. Draw Top Anchor Header ("Эталоны «У» справа + резервный слот слева")
         ctx.fillStyle = '#090f1d';
         ctx.fillRect(0, 0, w, wfTop);
 
@@ -1021,82 +983,92 @@
         ctx.lineTo(w, wfTop);
         ctx.stroke();
 
-        // Draw "У" Target Sockets in the top header
-        const socketY = 36;
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.14)';
-        ctx.strokeStyle = 'rgba(34, 211, 238, 0.7)';
-        ctx.lineWidth = 1.5;
+        const socketY = 38;
+
+        // Draw Ghost Slot Marker on the Left
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+        ctx.setLineDash([3, 3]);
         ctx.beginPath();
-        ctx.roundRect(f1LeftX, socketY - 12, f1RightX - f1LeftX, 24, 8);
-        ctx.fill();
+        ctx.arc(ghostX, socketY, 9, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
 
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.14)';
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
-        ctx.beginPath();
-        ctx.roundRect(f2LeftX, socketY - 12, f2RightX - f2LeftX, 24, 8);
-        ctx.fill();
-        ctx.stroke();
+        ctx.font = '600 9px "Inter", sans-serif';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.fillText(`РЕЗЕРВ (~${Math.round(ghostHz)})`, ghostX, 15);
 
-        ctx.font = '700 9px "Inter", sans-serif';
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.9)';
-        ctx.fillText(`ПАЗ «У» (${Math.round(refF1)})`, f1CenterX, 14);
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
-        ctx.fillText(`ПАЗ «У» (${Math.round(refF2)})`, f2CenterX, 14);
+        // Draw Soft Center Target Rings for Ref 1 and Ref 2 on the Right
+        [
+          { x: f1CenterX, label: `ЭТАЛОН 1 (${Math.round(refF1)})` },
+          { x: f2CenterX, label: `ЭТАЛОН 2 (${Math.round(refF2)})` }
+        ].forEach((slot) => {
+          const grad = ctx.createRadialGradient(slot.x, socketY, 2, slot.x, socketY, 26);
+          grad.addColorStop(0, 'rgba(16, 185, 129, 0.38)');
+          grad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(slot.x, socketY, 26, 0, Math.PI * 2);
+          ctx.fill();
 
-        // 6. Draw Live Formant Orbs & Elastic Bridge inside the Top Socket Header
+          // Center target tick
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(slot.x, socketY - 12);
+          ctx.lineTo(slot.x, socketY + 12);
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(110, 231, 183, 0.92)';
+          ctx.fillText(slot.label, slot.x, 15);
+        });
+
+        // 6. Draw Live Formant Orbs & Gradient Bridge inside the Top Header
         const p1X = freqToX(smoothPeak1Hz, w);
         const p2X = freqToX(smoothPeak2Hz, w);
-        const in1 = Math.abs(smoothPeak1Hz - refF1) <= RAIL_TOLERANCE_HZ;
-        const in2 = Math.abs(smoothPeak2Hz - refF2) <= RAIL_TOLERANCE_HZ;
+        const rgb1 = getDeviationRGB(smoothPeak1Hz - refF1);
+        const rgb2 = getDeviationRGB(smoothPeak2Hz - refF2);
+        const color1 = rgbToCss(rgb1);
+        const color2 = rgbToCss(rgb2);
 
-        if (peak1Confidence > 0.35 && peak2Confidence > 0.35) {
-          const bothIn = (!isCalibrated) || (in1 && in2);
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(p1X, socketY);
-          ctx.lineTo(p2X, socketY);
-          ctx.strokeStyle = bothIn ? '#10b981' : '#f43f5e';
-          ctx.lineWidth = 4;
-          ctx.shadowColor = bothIn ? '#10b981' : '#f43f5e';
-          ctx.shadowBlur = 12;
-          ctx.stroke();
-          ctx.restore();
-        }
+        // Smooth gradient bridge connecting the two live formants
+        ctx.save();
+        const bridgeGrad = ctx.createLinearGradient(p1X, socketY, p2X, socketY);
+        bridgeGrad.addColorStop(0, color1);
+        bridgeGrad.addColorStop(1, color2);
+        ctx.beginPath();
+        ctx.moveTo(p1X, socketY);
+        ctx.lineTo(p2X, socketY);
+        ctx.strokeStyle = bridgeGrad;
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+        ctx.restore();
 
         // Live Orb 1
-        if (peak1Confidence > 0.2) {
-          ctx.save();
-          ctx.globalAlpha = peak1Confidence;
-          const orbColor = (!isCalibrated || in1) ? '#22d3ee' : '#f43f5e';
-          ctx.beginPath();
-          ctx.arc(p1X, socketY, 9, 0, Math.PI * 2);
-          ctx.fillStyle = orbColor;
-          ctx.shadowColor = orbColor;
-          ctx.shadowBlur = 14;
-          ctx.fill();
-          ctx.lineWidth = 2.5;
-          ctx.strokeStyle = '#ffffff';
-          ctx.stroke();
-          ctx.restore();
-        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p1X, socketY, 9, 0, Math.PI * 2);
+        ctx.fillStyle = color1;
+        ctx.shadowColor = color1;
+        ctx.shadowBlur = 14;
+        ctx.fill();
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+        ctx.restore();
 
         // Live Orb 2
-        if (peak2Confidence > 0.2) {
-          ctx.save();
-          ctx.globalAlpha = peak2Confidence;
-          const orbColor = (!isCalibrated || in2) ? '#fbbf24' : '#f43f5e';
-          ctx.beginPath();
-          ctx.arc(p2X, socketY, 9, 0, Math.PI * 2);
-          ctx.fillStyle = orbColor;
-          ctx.shadowColor = orbColor;
-          ctx.shadowBlur = 14;
-          ctx.fill();
-          ctx.lineWidth = 2.5;
-          ctx.strokeStyle = '#ffffff';
-          ctx.stroke();
-          ctx.restore();
-        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p2X, socketY, 9, 0, Math.PI * 2);
+        ctx.fillStyle = color2;
+        ctx.shadowColor = color2;
+        ctx.shadowBlur = 14;
+        ctx.fill();
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+        ctx.restore();
       }
 
       function animateLoop(now) {
@@ -1106,7 +1078,7 @@
 
         const analysis = analyzeWhisperFormants();
         updateStateAndUI(analysis, dt);
-        drawVisualizer();
+        drawVisualizer(dt);
 
         requestAnimationFrame(animateLoop);
       }
