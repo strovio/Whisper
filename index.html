@@ -146,6 +146,7 @@
       // Audio Web API objects
       let audioCtx = null;
       let mediaStream = null;
+      let sourceNode = null;
       let analyser = null;
       let rawFreqData = null;
       let smoothedEnvelope = null;
@@ -456,29 +457,204 @@
         }
       }
 
+      const BT_DEVICE_REGEX = /bluetooth|airpods|buds|headset|hands-free|handsfree|sco|wireless|bt\b/i;
+      const BUILTIN_MIC_REGEX = /built-in|internal|iphone|ipad|phone|bottom|back|front|speakerphone|встроенный|телефон/i;
+
+      async function acquireBuiltInMicStream() {
+        const baseAudioConstraints = {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1
+        };
+
+        // 1. Try to pick a non-Bluetooth microphone upfront if device labels are already unlocked
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+          try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInputs = devices.filter((d) => d.kind === 'audioinput' && d.deviceId);
+            const nonBtInputs = audioInputs.filter((d) => d.label && !BT_DEVICE_REGEX.test(d.label));
+            const preferredBuiltIn =
+              nonBtInputs.find((d) => BUILTIN_MIC_REGEX.test(d.label)) || nonBtInputs[0];
+
+            if (preferredBuiltIn) {
+              return await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  ...baseAudioConstraints,
+                  deviceId: { exact: preferredBuiltIn.deviceId }
+                }
+              });
+            }
+          } catch (_) {}
+        }
+
+        // 2. Fallback to standard request
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: baseAudioConstraints });
+        } catch (_) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
+        // 3. Once permission is granted, check if the OS routed us to a Bluetooth headset mic.
+        // If so, switch to the phone's built-in mic so Bluetooth stays in A2DP stereo mode.
+        try {
+          const activeTrack = stream.getAudioTracks()[0];
+          const activeLabel = activeTrack ? activeTrack.label || '' : '';
+          if (BT_DEVICE_REGEX.test(activeLabel) && navigator.mediaDevices.enumerateDevices) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const nonBtInputs = devices.filter(
+              (d) => d.kind === 'audioinput' && d.deviceId && !BT_DEVICE_REGEX.test(d.label || '')
+            );
+            const preferredBuiltIn =
+              nonBtInputs.find((d) => BUILTIN_MIC_REGEX.test(d.label || '')) || nonBtInputs[0];
+
+            if (preferredBuiltIn) {
+              stream.getTracks().forEach((t) => t.stop());
+              stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  ...baseAudioConstraints,
+                  deviceId: { exact: preferredBuiltIn.deviceId }
+                }
+              });
+            }
+          }
+        } catch (_) {}
+
+        return stream;
+      }
+
+      function releaseOSAudioSession() {
+        // Fix for iOS Safari / WebKit keeping Bluetooth locked in PlayAndRecord (HFP) mode after stopping mic
+        if ('audioSession' in navigator && navigator.audioSession) {
+          try {
+            navigator.audioSession.type = 'ambient';
+          } catch (_) {}
+          try {
+            navigator.audioSession.type = 'auto';
+          } catch (_) {}
+        }
+      }
+
       async function startMicrophone() {
         micErrorBox.classList.add('hidden');
         try {
-          if (audioCtx && mediaStream) {
-            await audioCtx.resume();
-            isRunning = true;
-            startOverlay.classList.add('hidden');
-            controlsBar.classList.remove('hidden');
-            updateMicButtonUI(true);
-            requestAnimationFrame(animateLoop);
-            return;
+          // Always ensure any previous stale session is fully cleaned up before starting
+          if (mediaStream || audioCtx) {
+            await stopMicrophone();
           }
 
-          let stream;
+          const stream = await acquireBuiltInMicStream();
+          mediaStream = stream;
+
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContextClass();
+          if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+          }
+
+          sourceNode = audioCtx.createMediaStreamSource(stream);
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 4096;
+          analyser.smoothingTimeConstant = 0.55;
+
+          sourceNode.connect(analyser);
+
+          const binCount = analyser.frequencyBinCount;
+          rawFreqData = new Float32Array(binCount);
+          smoothedEnvelope = new Float32Array(binCount);
+          temporalSpectrum = new Float32Array(binCount);
+          normalizedRidge = new Float32Array(binCount);
+          temporalSpectrum.fill(-110);
+
+          startOverlay.classList.add('hidden');
+          controlsBar.classList.remove('hidden');
+          updateMicButtonUI(true);
+          resizeCanvas();
+
+          isRunning = true;
+          requestAnimationFrame(animateLoop);
+        } catch (err) {
+          await stopMicrophone();
+          micErrorBox.textContent =
+            'Не удалось получить доступ к микрофону. Разрешите использование микрофона в настройках браузера.';
+          micErrorBox.classList.remove('hidden');
+        }
+      }
+
+      async function stopMicrophone() {
+        isRunning = false;
+        isCalibratingHold = false;
+        calibrateHoldBtn.classList.remove('calibrating-active');
+        calibBtnDot.className = 'w-2 h-2 rounded-full bg-[#d6c7b2]';
+
+        if (sourceNode) {
+          try { sourceNode.disconnect(); } catch (_) {}
+          sourceNode = null;
+        }
+
+        if (analyser) {
+          try { analyser.disconnect(); } catch (_) {}
+          analyser = null;
+        }
+
+        if (mediaStream) {
+          const tracks = mediaStream.getTracks();
+          tracks.forEach((t) => {
+            try {
+              t.enabled = false;
+              t.stop();
+              mediaStream.removeTrack(t);
+            } catch (_) {}
+          });
+          mediaStream = null;
+        }
+
+        if (audioCtx) {
+          const ctxToClose = audioCtx;
+          audioCtx = null;
           try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                echoCancellation: false,
-                noiseSuppression: false,
-                autoGainControl: false,
-                channelCount: 1
-              }
-            });
+            if (ctxToClose.state !== 'closed') {
+              await ctxToClose.suspend();
+              await ctxToClose.close();
+            }
+          } catch (_) {}
+        }
+
+        releaseOSAudioSession();
+
+        trackedFormants = [];
+        updateMicButtonUI(false);
+        drawVisualizer();
+      }
+
+      function toggleMicrophone() {
+        if (isRunning) {
+          stopMicrophone();
+        } else {
+          startMicrophone();
+        }
+      }
+
+      startMicBtn.addEventListener('click', startMicrophone);
+      micToggleBtn.addEventListener('click', toggleMicrophone);
+
+      // Immediately release microphone & Bluetooth audio lock when minimizing browser, switching apps, or closing tab
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && (isRunning || mediaStream || audioCtx)) {
+          stopMicrophone();
+        }
+      });
+      window.addEventListener('pagehide', () => {
+        if (isRunning || mediaStream || audioCtx) {
+          stopMicrophone();
+        }
+      });
+      window.addEventListener('beforeunload', () => {
+        if (isRunning || mediaStream || audioCtx) {
+          stopMicrophone();
+        }
+      });
           } catch (constraintErr) {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           }
