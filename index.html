@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-deep: #070b14;
+      --bg-deep: #120b07;
     }
 
     * {
@@ -27,7 +27,7 @@
       height: 100dvh;
       overflow: hidden;
       background-color: var(--bg-deep);
-      color: #f8fafc;
+      color: #fef3c7;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
@@ -59,9 +59,9 @@
     }
 
     #calibrate-hold-btn.calibrating-active {
-      background: rgba(251, 191, 36, 0.22);
+      background: rgba(245, 158, 11, 0.28);
       border-color: #fbbf24;
-      color: #fde68a;
+      color: #fef3c7;
       transform: scale(0.985);
     }
 
@@ -75,7 +75,7 @@
     input[type="range"]::-webkit-slider-runnable-track {
       height: 6px;
       border-radius: 999px;
-      background: #1e293b;
+      background: #362217;
     }
 
     input[type="range"]::-webkit-slider-thumb {
@@ -84,10 +84,10 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: #38bdf8;
-      border: 2px solid #0f172a;
+      background: #f59e0b;
+      border: 2px solid #1c110b;
       margin-top: -6px;
-      box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.55);
     }
   </style>
 </head>
@@ -95,40 +95,46 @@
 
   <div id="app-shell" class="w-full h-full flex flex-col justify-between p-2 sm:p-3.5 relative z-10 gap-2">
 
-    <!-- Minimalist Navigation & Scale Bar -->
-    <header class="w-full rounded-xl bg-slate-900/90 border border-slate-800/90 px-3 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
-      <div class="flex items-center gap-3 flex-1 min-w-[200px]">
-        <span class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Позиция (Гц):</span>
-        <input id="pan-slider" type="range" min="400" max="3200" step="10" value="1150" class="w-full" />
-        <span id="range-label" class="mono text-[11px] text-slate-300 whitespace-nowrap">1150–3950 Гц</span>
+    <!-- Minimalist Navigation, Mic Toggle & Scale Bar -->
+    <header class="w-full rounded-xl bg-[#1c120c]/95 border border-[#3b261a] px-3 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <button id="mic-toggle-btn" type="button"
+        class="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/50 text-amber-200 font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0">
+        <span id="mic-status-dot" class="w-2 h-2 rounded-full bg-stone-500"></span>
+        <span id="mic-toggle-text">Микрофон: Выкл</span>
+      </button>
+
+      <div class="flex items-center gap-3 flex-1 min-w-[180px]">
+        <span class="text-[11px] font-semibold text-amber-200/70 whitespace-nowrap">Позиция (Гц):</span>
+        <input id="pan-slider" type="range" min="300" max="3200" step="10" value="700" class="w-full" />
+        <span id="range-label" class="mono text-[11px] text-amber-100 whitespace-nowrap">700–4900 Гц</span>
       </div>
 
-      <div class="flex items-center gap-2.5 w-full sm:w-auto sm:min-w-[190px]">
-        <span class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Масштаб:</span>
-        <input id="zoom-slider" type="range" min="1400" max="4000" step="50" value="2800" class="w-full sm:w-28" />
-        <span class="text-[10px] text-slate-500 hidden sm:inline whitespace-nowrap">Можно двигать график пальцем</span>
+      <div class="flex items-center gap-2.5 w-full sm:w-auto sm:min-w-[160px]">
+        <span class="text-[11px] font-semibold text-amber-200/70 whitespace-nowrap">Масштаб:</span>
+        <input id="zoom-slider" type="range" min="1400" max="4200" step="50" value="4200" class="w-full sm:w-28" />
       </div>
     </header>
 
-    <main class="w-full flex-1 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800/90 shadow-inner flex flex-col">
+    <main class="w-full flex-1 relative rounded-2xl overflow-hidden bg-[#100a06] border border-[#3b261a] shadow-inner flex flex-col">
       <canvas id="visualizer-canvas" class="w-full h-full block"></canvas>
 
       <!-- Floating Press-and-Hold Calibration Button -->
       <div id="controls-bar" class="hidden absolute bottom-3 left-3 right-3 flex items-center justify-center pointer-events-none">
         <button id="calibrate-hold-btn" type="button"
-          class="pointer-events-auto w-full sm:w-auto sm:min-w-[320px] py-3 px-5 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700 text-slate-200 font-semibold text-xs sm:text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer">
+          class="pointer-events-auto w-full sm:w-auto sm:min-w-[320px] py-3 px-5 rounded-xl bg-[#1c120c]/90 backdrop-blur-md border border-[#523422] text-amber-100 font-semibold text-xs sm:text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer">
           <span id="calib-btn-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
           <span id="calib-btn-text">УДЕРЖИВАЙТЕ ДЛЯ КАЛИБРОВКИ ПУНКТИРНЫХ ЛИНИЙ</span>
         </button>
       </div>
     </main>
 
-    <div id="start-overlay" class="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-      <div class="max-w-sm w-full flex flex-col items-center">
-        <div class="relative mb-6 flex items-center justify-center">
-          <div class="w-24 h-24 rounded-full bg-sky-500/15 mic-pulse absolute"></div>
-          <button id="start-mic-btn" type="button"
-            class="relative z-10 w-20 h-20 rounded-full bg-sky-400 text-slate-950 shadow-xl shadow-sky-500/20 flex items-center justify-center active:scale-95 transition-transform duration-150 cursor-pointer">
+    <!-- Minimal Start Overlay without comments -->
+    <div id="start-overlay" class="absolute inset-0 z-30 bg-[#120b07]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+      <div class=" flex flex-col items-center">
+        <div class="relative flex items-center justify-center">
+          <div class="w-24 h-24 rounded-full bg-amber-500/20 mic-pulse absolute"></div>
+          <button id="start-mic-btn" type="button" aria-label="Включить микрофон"
+            class="relative z-10 w-20 h-20 rounded-full bg-amber-500 text-[#180f09] shadow-xl shadow-amber-500/25 flex items-center justify-center active:scale-95 transition-transform duration-150 cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -137,20 +143,7 @@
           </button>
         </div>
 
-        <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight mb-2">
-          Формантный водопад
-        </h1>
-        <p class="text-sm text-slate-300 leading-relaxed mb-6">
-          Чистая спектрограмма шёпота без порога громкости.<br/>
-          Перетаскивайте график пальцем влево-вправо или ползунком, а для установки двух пунктирных ориентиров зажмите кнопку калибровки.
-        </p>
-
-        <button id="start-mic-text-btn" type="button"
-          class="w-full py-3.5 px-6 rounded-xl bg-sky-400 text-slate-950 font-bold text-base shadow-lg shadow-sky-500/20 active:scale-98 transition cursor-pointer">
-          Включить микрофон
-        </button>
-
-        <div id="mic-error-box" class="hidden mt-4 p-3.5 rounded-xl bg-rose-950/90 border border-rose-700 text-rose-200 text-xs text-left leading-relaxed"></div>
+        <div id="mic-error-box" class="hidden mt-6 max-w-xs p-3.5 rounded-xl bg-rose-950/90 border border-rose-700 text-rose-200 text-xs text-center leading-relaxed"></div>
       </div>
     </div>
 
@@ -169,28 +162,29 @@
       const MAX_STABLE_DRIFT_HZ = 95;
       const CONFIRM_STABLE_FRAMES = 12; // ~200ms of steady presence required before showing
 
-      // Dashed reference lines (initialized with default pair, updated to stable formants on calibration)
-      let refLines = [2461, 3059];
+      // Dashed reference lines initialized to 2314 and 3284 Hz by default
+      let refLines = [2314, 3284];
 
-      // User-controlled frequency viewport (pan & span)
-      let displayMinHz = 1150;
-      let displaySpanHz = 2800;
+      // User-controlled frequency viewport with maximum scale by default
+      let displayMinHz = 700;
+      let displaySpanHz = 4200;
       let displayMaxHz = displayMinHz + displaySpanHz;
 
       let isCalibratingHold = false;
 
-      // Stateful multi-formant tracker list: { id, hz, prom, confidence, missedFrames }
+      // Stateful multi-formant tracker list
       let trackedFormants = [];
       let nextTrackId = 1;
 
-      // Waterfall configuration and history buffer (for sharp redrawing on finger drag)
+      // Waterfall configuration and history buffer
       const WATERFALL_SPEED_PX = 2;
-      const TOP_HEADER_HEIGHT = 82;
+      const TOP_HEADER_HEIGHT = 86;
       const MAX_HISTORY_ROWS = 600;
       let ridgeHistory = [];
 
       // Audio Web API objects
       let audioCtx = null;
+      let mediaStream = null;
       let analyser = null;
       let rawFreqData = null;
       let smoothedEnvelope = null;
@@ -201,7 +195,9 @@
 
       const startOverlay = document.getElementById('start-overlay');
       const startMicBtn = document.getElementById('start-mic-btn');
-      const startMicTextBtn = document.getElementById('start-mic-text-btn');
+      const micToggleBtn = document.getElementById('mic-toggle-btn');
+      const micStatusDot = document.getElementById('mic-status-dot');
+      const micToggleText = document.getElementById('mic-toggle-text');
       const micErrorBox = document.getElementById('mic-error-box');
       const controlsBar = document.getElementById('controls-bar');
       const calibrateHoldBtn = document.getElementById('calibrate-hold-btn');
@@ -220,19 +216,19 @@
 
       let canvasWidth = 320;
       let canvasHeight = 460;
-      let waterfallHeight = 378;
+      let waterfallHeight = 374;
       let dpr = window.devicePixelRatio || 1;
 
-      // Precompute 256-level clean spectrogram colormap (only depends on intensity)
-      // Deep navy -> Slate blue -> Cyan -> Warm ivory
+      // Precompute 256-level warm spectrogram colormap
+      // Deep espresso -> Mahogany -> Terracotta/Orange -> Warm Amber -> Sunlit Ivory
       const colorLUT = new Uint8Array(256 * 3);
       (function buildColormap() {
         const stops = [
-          { pos: 0.00, rgb: [5, 8, 17] },
-          { pos: 0.25, rgb: [15, 32, 67] },
-          { pos: 0.55, rgb: [14, 116, 144] },
-          { pos: 0.80, rgb: [56, 189, 248] },
-          { pos: 1.00, rgb: [248, 250, 252] }
+          { pos: 0.00, rgb: [16, 10, 6] },
+          { pos: 0.25, rgb: [72, 24, 14] },
+          { pos: 0.55, rgb: [176, 65, 19] },
+          { pos: 0.80, rgb: [245, 158, 11] },
+          { pos: 1.00, rgb: [255, 248, 231] }
         ];
         for (let i = 0; i < 256; i++) {
           const t = i / 255;
@@ -311,7 +307,7 @@
         } else {
           const factor = e.deltaY > 0 ? 1.08 : 0.92;
           const centerHz = displayMinHz + displaySpanHz * 0.5;
-          const nextSpan = Math.max(1200, Math.min(4000, displaySpanHz * factor));
+          const nextSpan = Math.max(1200, Math.min(4200, displaySpanHz * factor));
           updateViewportBounds(centerHz - nextSpan * 0.5, nextSpan);
         }
       }, { passive: false });
@@ -360,9 +356,33 @@
       calibrateHoldBtn.addEventListener('touchstart', beginHoldCalibration, { passive: false });
       window.addEventListener('touchend', endHoldCalibration);
 
+      function updateMicButtonUI(active) {
+        if (active) {
+          micStatusDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+          micToggleText.textContent = 'Микрофон: Вкл';
+          micToggleBtn.className =
+            'px-3 py-1.5 rounded-lg bg-amber-500/25 border border-amber-400/70 text-amber-100 font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0';
+        } else {
+          micStatusDot.className = 'w-2 h-2 rounded-full bg-stone-500';
+          micToggleText.textContent = 'Микрофон: Выкл';
+          micToggleBtn.className =
+            'px-3 py-1.5 rounded-lg bg-stone-800/70 border border-stone-700 text-stone-300 font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0';
+        }
+      }
+
       async function startMicrophone() {
         micErrorBox.classList.add('hidden');
         try {
+          if (audioCtx && mediaStream) {
+            await audioCtx.resume();
+            isRunning = true;
+            startOverlay.classList.add('hidden');
+            controlsBar.classList.remove('hidden');
+            updateMicButtonUI(true);
+            requestAnimationFrame(animateLoop);
+            return;
+          }
+
           let stream;
           try {
             stream = await navigator.mediaDevices.getUserMedia({
@@ -377,6 +397,7 @@
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           }
 
+          mediaStream = stream;
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           audioCtx = new AudioContextClass();
           if (audioCtx.state === 'suspended') {
@@ -399,19 +420,44 @@
 
           startOverlay.classList.add('hidden');
           controlsBar.classList.remove('hidden');
+          updateMicButtonUI(true);
           resizeCanvas();
 
           isRunning = true;
           requestAnimationFrame(animateLoop);
         } catch (err) {
           micErrorBox.textContent =
-            'Не удалось получить доступ к микрофону. Пожалуйста, разрешите использование микрофона в настройках браузера и обновите страницу.';
+            'Не удалось получить доступ к микрофону. Разрешите использование микрофона в настройках браузера.';
           micErrorBox.classList.remove('hidden');
         }
       }
 
+      async function stopMicrophone() {
+        isRunning = false;
+        isCalibratingHold = false;
+        if (mediaStream) {
+          mediaStream.getTracks().forEach((t) => t.stop());
+          mediaStream = null;
+        }
+        if (audioCtx) {
+          try { await audioCtx.close(); } catch (_) {}
+          audioCtx = null;
+        }
+        trackedFormants = [];
+        updateMicButtonUI(false);
+        drawVisualizer();
+      }
+
+      function toggleMicrophone() {
+        if (isRunning) {
+          stopMicrophone();
+        } else {
+          startMicrophone();
+        }
+      }
+
       startMicBtn.addEventListener('click', startMicrophone);
-      startMicTextBtn.addEventListener('click', startMicrophone);
+      micToggleBtn.addEventListener('click', toggleMicrophone);
 
       function freqToBin(hz, sampleRate, binCount) {
         const nyquist = sampleRate / 2;
@@ -711,11 +757,11 @@
           needsFullWaterfallRedraw = false;
           const fullImg = waterfallCtx.createImageData(w, h);
           const data = fullImg.data;
-          // Fill background
+          // Fill warm espresso background
           for (let i = 0; i < data.length; i += 4) {
-            data[i] = 5;
-            data[i + 1] = 8;
-            data[i + 2] = 17;
+            data[i] = 16;
+            data[i + 1] = 10;
+            data[i + 2] = 6;
             data[i + 3] = 255;
           }
           const maxRows = Math.min(ridgeHistory.length, Math.ceil(h / WATERFALL_SPEED_PX));
@@ -747,7 +793,7 @@
         updateWaterfallBitmap();
         ctx.drawImage(waterfallCanvas, 0, wfTop, w, waterfallHeight);
 
-        // 2. Draw subtle frequency grid lines over the waterfall
+        // 2. Draw subtle warm frequency grid lines over the waterfall
         ctx.lineWidth = 1;
         ctx.font = '500 10px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
@@ -757,7 +803,7 @@
 
         for (let freq = firstGridHz; freq <= displayMaxHz; freq += gridStepHz) {
           const x = freqToX(freq, w);
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.11)';
           ctx.beginPath();
           ctx.moveTo(x, wfTop);
           ctx.lineTo(x, h);
@@ -765,43 +811,43 @@
         }
 
         // 3. Draw top live spectrum strip (shows current formant hills and frequencies)
-        ctx.fillStyle = '#090f1d';
+        ctx.fillStyle = '#160e09';
         ctx.fillRect(0, 0, w, wfTop);
 
-        if (ridgeHistory.length > 0 && audioCtx && analyser) {
+        if (ridgeHistory.length > 0 && analyser) {
           const latestRow = ridgeHistory[0];
-          const sampleRate = audioCtx.sampleRate;
-          const binCount = analyser.frequencyBinCount;
+          const sampleRate = audioCtx ? audioCtx.sampleRate : 48000;
+          const binCount = analyser ? analyser.frequencyBinCount : 2048;
           const nyquist = sampleRate / 2;
 
           ctx.beginPath();
-          ctx.moveTo(0, wfTop - 18);
+          ctx.moveTo(0, wfTop - 20);
           for (let x = 0; x < w; x += 2) {
             const freq = xToFreq(x, w);
             const exactBin = (freq / nyquist) * binCount;
             const b0 = Math.max(0, Math.min(latestRow.length - 1, Math.floor(exactBin)));
             const norm = latestRow[b0] / 255;
-            const y = (wfTop - 18) - norm * 42;
+            const y = (wfTop - 20) - norm * 42;
             ctx.lineTo(x, y);
           }
-          ctx.lineTo(w, wfTop - 18);
+          ctx.lineTo(w, wfTop - 20);
           ctx.closePath();
 
-          const envGrad = ctx.createLinearGradient(0, wfTop - 62, 0, wfTop - 18);
-          envGrad.addColorStop(0, 'rgba(56, 189, 248, 0.38)');
-          envGrad.addColorStop(1, 'rgba(56, 189, 248, 0.03)');
+          const envGrad = ctx.createLinearGradient(0, wfTop - 64, 0, wfTop - 20);
+          envGrad.addColorStop(0, 'rgba(245, 158, 11, 0.42)');
+          envGrad.addColorStop(1, 'rgba(217, 119, 6, 0.04)');
           ctx.fillStyle = envGrad;
           ctx.fill();
 
-          ctx.strokeStyle = 'rgba(125, 211, 252, 0.85)';
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.88)';
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
 
-        // 4. Draw frequency ruler along the bottom edge of the top strip
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(0, wfTop - 18, w, 18);
-        ctx.strokeStyle = 'rgba(71, 85, 105, 0.8)';
+        // 4. Draw frequency ruler along the bottom edge of the top strip (above waterfall)
+        ctx.fillStyle = '#21150e';
+        ctx.fillRect(0, wfTop - 20, w, 20);
+        ctx.strokeStyle = 'rgba(120, 75, 45, 0.8)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, wfTop);
@@ -811,14 +857,14 @@
         for (let freq = Math.ceil(displayMinHz / 100) * 100; freq <= displayMaxHz; freq += 100) {
           const x = freqToX(freq, w);
           const isMajor = freq % gridStepHz === 0;
-          ctx.strokeStyle = isMajor ? 'rgba(148, 163, 184, 0.65)' : 'rgba(148, 163, 184, 0.25)';
+          ctx.strokeStyle = isMajor ? 'rgba(217, 160, 102, 0.65)' : 'rgba(217, 160, 102, 0.25)';
           ctx.beginPath();
           ctx.moveTo(x, wfTop - (isMajor ? 6 : 3));
           ctx.lineTo(x, wfTop);
           ctx.stroke();
 
           if (isMajor) {
-            ctx.fillStyle = '#94a3b8';
+            ctx.fillStyle = '#a88468';
             ctx.font = '500 10px "JetBrains Mono", monospace';
             ctx.fillText(`${freq}`, x, wfTop - 7);
           }
@@ -832,7 +878,7 @@
           const px = freqToX(track.hz, w);
           if (px < 8 || px > w - 8) continue;
 
-          const py = (wfTop - 18) - Math.max(0.15, Math.min(1, track.prom)) * 42;
+          const py = (wfTop - 20) - Math.max(0.15, Math.min(1, track.prom)) * 42;
           const label = `${Math.round(track.hz)}`;
           ctx.font = '700 10px "JetBrains Mono", monospace';
           const boxW = ctx.measureText(label).width + 10;
@@ -870,7 +916,7 @@
           // Subtle leader line from badge to exact peak dot
           const boxY = 4;
           const boxH = 17;
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(peak.labelCenterX, boxY + boxH);
@@ -878,29 +924,29 @@
           ctx.stroke();
 
           // Small pointer dot on the live envelope hill
-          ctx.fillStyle = '#f8fafc';
+          ctx.fillStyle = '#fffbeb';
           ctx.beginPath();
           ctx.arc(peak.px, peak.py, 3.2, 0, Math.PI * 2);
           ctx.fill();
 
           // Live formant frequency tag above the hill
           const boxX = peak.labelCenterX - peak.boxW * 0.5;
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+          ctx.fillStyle = 'rgba(28, 18, 12, 0.92)';
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.75)';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.roundRect(boxX, boxY, peak.boxW, boxH, 4);
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = '#e0f2fe';
+          ctx.fillStyle = '#fde68a';
           ctx.font = '700 10px "JetBrains Mono", monospace';
           ctx.textAlign = 'center';
           ctx.fillText(peak.label, peak.labelCenterX, boxY + 12);
           ctx.restore();
         });
 
-        // 6. Draw VERTICAL DASHED CALIBRATION LINES across the entire graph
+        // 6. Draw VERTICAL DASHED CALIBRATION LINES with labels placed in the ruler strip above the waterfall
         refLines.forEach((refHz) => {
           const rx = freqToX(refHz, w);
           if (rx < 0 || rx > w) return;
@@ -909,25 +955,38 @@
           ctx.setLineDash([7, 6]);
           ctx.lineWidth = 2;
           ctx.strokeStyle = isCalibratingHold
-            ? 'rgba(251, 191, 36, 0.95)'
-            : 'rgba(251, 191, 36, 0.82)';
+            ? 'rgba(254, 240, 138, 0.98)'
+            : 'rgba(251, 146, 60, 0.88)';
           ctx.beginPath();
-          ctx.moveTo(rx, wfTop - 18);
+          ctx.moveTo(rx, wfTop);
           ctx.lineTo(rx, h);
           ctx.stroke();
           ctx.restore();
 
-          // Reference Hz label attached to the dashed line at the top of the waterfall
+          // Reference Hz label placed inside the ruler strip (above wfTop) so it never blocks the waterfall
           const refText = `${Math.round(refHz)}`;
           ctx.font = '700 10px "JetBrains Mono", monospace';
           const tw = ctx.measureText(refText).width;
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-          ctx.fillRect(rx - tw * 0.5 - 3, wfTop + 4, tw + 6, 15);
-          ctx.fillStyle = '#fbbf24';
+          const badgeW = tw + 8;
+          const badgeH = 16;
+          const badgeX = Math.max(2, Math.min(w - badgeW - 2, rx - badgeW * 0.5));
+          const badgeY = wfTop - 18;
+
+          ctx.fillStyle = '#2a170d';
+          ctx.strokeStyle = isCalibratingHold ? '#fef08a' : '#fb923c';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#fed7aa';
           ctx.textAlign = 'center';
-          ctx.fillText(refText, rx, wfTop + 15);
+          ctx.fillText(refText, badgeX + badgeW * 0.5, badgeY + 11.5);
         });
       }
+
+      drawVisualizer();
 
       function animateLoop() {
         if (!isRunning) return;
