@@ -468,27 +468,8 @@
           channelCount: 1
         };
 
-        // 1. Try to pick a non-Bluetooth microphone upfront if device labels are already unlocked
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-          try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const audioInputs = devices.filter((d) => d.kind === 'audioinput' && d.deviceId);
-            const nonBtInputs = audioInputs.filter((d) => d.label && !BT_DEVICE_REGEX.test(d.label));
-            const preferredBuiltIn =
-              nonBtInputs.find((d) => BUILTIN_MIC_REGEX.test(d.label)) || nonBtInputs[0];
-
-            if (preferredBuiltIn) {
-              return await navigator.mediaDevices.getUserMedia({
-                audio: {
-                  ...baseAudioConstraints,
-                  deviceId: { exact: preferredBuiltIn.deviceId }
-                }
-              });
-            }
-          } catch (_) {}
-        }
-
-        // 2. Fallback to standard request
+        // IMPORTANT: Call getUserMedia immediately inside the user gesture handler
+        // so mobile browsers (iOS Safari / Android Chrome) always trigger the permission prompt.
         let stream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({ audio: baseAudioConstraints });
@@ -496,7 +477,7 @@
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         }
 
-        // 3. Once permission is granted, check if the OS routed us to a Bluetooth headset mic.
+        // Once permission is granted, check if the OS routed us to a Bluetooth headset mic.
         // If so, switch to the phone's built-in mic so Bluetooth stays in A2DP stereo mode.
         try {
           const activeTrack = stream.getAudioTracks()[0];
@@ -539,7 +520,7 @@
       async function startMicrophone() {
         micErrorBox.classList.add('hidden');
         try {
-          // Always ensure any previous stale session is fully cleaned up before starting
+          // Ensure any previous session is cleaned up before requesting mic
           if (mediaStream || audioCtx) {
             await stopMicrophone();
           }
@@ -655,71 +636,6 @@
           stopMicrophone();
         }
       });
-          } catch (constraintErr) {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          }
-
-          mediaStream = stream;
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          audioCtx = new AudioContextClass();
-          if (audioCtx.state === 'suspended') {
-            await audioCtx.resume();
-          }
-
-          const source = audioCtx.createMediaStreamSource(stream);
-          analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 4096;
-          analyser.smoothingTimeConstant = 0.55;
-
-          source.connect(analyser);
-
-          const binCount = analyser.frequencyBinCount;
-          rawFreqData = new Float32Array(binCount);
-          smoothedEnvelope = new Float32Array(binCount);
-          temporalSpectrum = new Float32Array(binCount);
-          normalizedRidge = new Float32Array(binCount);
-          temporalSpectrum.fill(-110);
-
-          startOverlay.classList.add('hidden');
-          controlsBar.classList.remove('hidden');
-          updateMicButtonUI(true);
-          resizeCanvas();
-
-          isRunning = true;
-          requestAnimationFrame(animateLoop);
-        } catch (err) {
-          micErrorBox.textContent =
-            'Не удалось получить доступ к микрофону. Разрешите использование микрофона в настройках браузера.';
-          micErrorBox.classList.remove('hidden');
-        }
-      }
-
-      async function stopMicrophone() {
-        isRunning = false;
-        isCalibratingHold = false;
-        if (mediaStream) {
-          mediaStream.getTracks().forEach((t) => t.stop());
-          mediaStream = null;
-        }
-        if (audioCtx) {
-          try { await audioCtx.close(); } catch (_) {}
-          audioCtx = null;
-        }
-        trackedFormants = [];
-        updateMicButtonUI(false);
-        drawVisualizer();
-      }
-
-      function toggleMicrophone() {
-        if (isRunning) {
-          stopMicrophone();
-        } else {
-          startMicrophone();
-        }
-      }
-
-      startMicBtn.addEventListener('click', startMicrophone);
-      micToggleBtn.addEventListener('click', toggleMicrophone);
 
       function freqToBin(hz, sampleRate, binCount) {
         const nyquist = sampleRate / 2;
