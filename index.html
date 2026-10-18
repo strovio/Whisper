@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-deep: #120b07;
+      --bg-deep: #171513;
     }
 
     * {
@@ -27,7 +27,7 @@
       height: 100dvh;
       overflow: hidden;
       background-color: var(--bg-deep);
-      color: #fef3c7;
+      color: #e7e2da;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
@@ -59,35 +59,10 @@
     }
 
     #calibrate-hold-btn.calibrating-active {
-      background: rgba(245, 158, 11, 0.28);
-      border-color: #fbbf24;
-      color: #fef3c7;
+      background: rgba(214, 199, 178, 0.22);
+      border-color: #d6c7b2;
+      color: #f5f2ed;
       transform: scale(0.985);
-    }
-
-    input[type="range"] {
-      -webkit-appearance: none;
-      appearance: none;
-      background: transparent;
-      cursor: pointer;
-    }
-
-    input[type="range"]::-webkit-slider-runnable-track {
-      height: 6px;
-      border-radius: 999px;
-      background: #362217;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #f59e0b;
-      border: 2px solid #1c110b;
-      margin-top: -6px;
-      box-shadow: 0 0 8px rgba(245, 158, 11, 0.55);
     }
   </style>
 </head>
@@ -95,46 +70,37 @@
 
   <div id="app-shell" class="w-full h-full flex flex-col justify-between p-2 sm:p-3.5 relative z-10 gap-2">
 
-    <!-- Minimalist Navigation, Mic Toggle & Scale Bar -->
-    <header class="w-full rounded-xl bg-[#1c120c]/95 border border-[#3b261a] px-3 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+    <!-- Minimalist Navigation & Mic Toggle Bar -->
+    <header class="w-full rounded-xl bg-[#211e1b]/95 border border-[#36312c] px-3 py-2 flex items-center justify-between gap-3 shrink-0">
       <button id="mic-toggle-btn" type="button"
-        class="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/50 text-amber-200 font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0">
+        class="px-3 py-1.5 rounded-lg bg-[#2c2723] border border-[#4a433c] text-[#e7e2da] font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0">
         <span id="mic-status-dot" class="w-2 h-2 rounded-full bg-stone-500"></span>
         <span id="mic-toggle-text">Микрофон: Выкл</span>
       </button>
 
-      <div class="flex items-center gap-3 flex-1 min-w-[180px]">
-        <span class="text-[11px] font-semibold text-amber-200/70 whitespace-nowrap">Позиция (Гц):</span>
-        <input id="pan-slider" type="range" min="300" max="3200" step="10" value="700" class="w-full" />
-        <span id="range-label" class="mono text-[11px] text-amber-100 whitespace-nowrap">700–4900 Гц</span>
-      </div>
-
-      <div class="flex items-center gap-2.5 w-full sm:w-auto sm:min-w-[160px]">
-        <span class="text-[11px] font-semibold text-amber-200/70 whitespace-nowrap">Масштаб:</span>
-        <input id="zoom-slider" type="range" min="1400" max="4200" step="50" value="4200" class="w-full sm:w-28" />
-      </div>
+      <span id="range-label" class="mono text-[11px] text-[#b8afa4] whitespace-nowrap">700–4900 Гц</span>
     </header>
 
-    <main class="w-full flex-1 relative rounded-2xl overflow-hidden bg-[#100a06] border border-[#3b261a] shadow-inner flex flex-col">
+    <main class="w-full flex-1 relative rounded-2xl overflow-hidden bg-[#0a1816] border border-[#36312c] shadow-inner flex flex-col">
       <canvas id="visualizer-canvas" class="w-full h-full block"></canvas>
 
       <!-- Floating Press-and-Hold Calibration Button -->
       <div id="controls-bar" class="hidden absolute bottom-3 left-3 right-3 flex items-center justify-center pointer-events-none">
         <button id="calibrate-hold-btn" type="button"
-          class="pointer-events-auto w-full sm:w-auto sm:min-w-[320px] py-3 px-5 rounded-xl bg-[#1c120c]/90 backdrop-blur-md border border-[#523422] text-amber-100 font-semibold text-xs sm:text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer">
-          <span id="calib-btn-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          class="pointer-events-auto w-full sm:w-auto sm:min-w-[320px] py-3 px-5 rounded-xl bg-[#211e1b]/90 backdrop-blur-md border border-[#4a433c] text-[#e7e2da] font-semibold text-xs sm:text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer">
+          <span id="calib-btn-dot" class="w-2 h-2 rounded-full bg-[#d6c7b2]"></span>
           <span id="calib-btn-text">УДЕРЖИВАЙТЕ ДЛЯ КАЛИБРОВКИ ПУНКТИРНЫХ ЛИНИЙ</span>
         </button>
       </div>
     </main>
 
     <!-- Minimal Start Overlay without comments -->
-    <div id="start-overlay" class="absolute inset-0 z-30 bg-[#120b07]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-      <div class=" flex flex-col items-center">
+    <div id="start-overlay" class="absolute inset-0 z-30 bg-[#171513]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+      <div class="flex flex-col items-center">
         <div class="relative flex items-center justify-center">
-          <div class="w-24 h-24 rounded-full bg-amber-500/20 mic-pulse absolute"></div>
+          <div class="w-24 h-24 rounded-full bg-[#d6c7b2]/20 mic-pulse absolute"></div>
           <button id="start-mic-btn" type="button" aria-label="Включить микрофон"
-            class="relative z-10 w-20 h-20 rounded-full bg-amber-500 text-[#180f09] shadow-xl shadow-amber-500/25 flex items-center justify-center active:scale-95 transition-transform duration-150 cursor-pointer">
+            class="relative z-10 w-20 h-20 rounded-full bg-[#d6c7b2] text-[#1c1917] shadow-xl shadow-black/40 flex items-center justify-center active:scale-95 transition-transform duration-150 cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -204,8 +170,6 @@
       const calibBtnDot = document.getElementById('calib-btn-dot');
       const calibBtnText = document.getElementById('calib-btn-text');
 
-      const panSlider = document.getElementById('pan-slider');
-      const zoomSlider = document.getElementById('zoom-slider');
       const rangeLabel = document.getElementById('range-label');
 
       const canvas = document.getElementById('visualizer-canvas');
@@ -219,16 +183,17 @@
       let waterfallHeight = 374;
       let dpr = window.devicePixelRatio || 1;
 
-      // Precompute 256-level warm spectrogram colormap
-      // Deep espresso -> Mahogany -> Terracotta/Orange -> Warm Amber -> Sunlit Ivory
+      // Precompute 256-level multi-color spectrogram LUT:
+      // Cold dark-green -> Blue -> Violet/Purple -> Orange -> Yellow -> White on peaks
       const colorLUT = new Uint8Array(256 * 3);
       (function buildColormap() {
         const stops = [
-          { pos: 0.00, rgb: [16, 10, 6] },
-          { pos: 0.25, rgb: [72, 24, 14] },
-          { pos: 0.55, rgb: [176, 65, 19] },
-          { pos: 0.80, rgb: [245, 158, 11] },
-          { pos: 1.00, rgb: [255, 248, 231] }
+          { pos: 0.00, rgb: [10, 24, 22] },    // Cold deep dark-green
+          { pos: 0.20, rgb: [20, 62, 130] },   // Cold deep blue
+          { pos: 0.42, rgb: [108, 42, 156] },  // Rich violet / purple
+          { pos: 0.65, rgb: [224, 90, 32] },   // Warm orange
+          { pos: 0.84, rgb: [250, 208, 44] },  // Bright yellow
+          { pos: 1.00, rgb: [255, 255, 252] }  // Crisp white peak
         ];
         for (let i = 0; i < 256; i++) {
           const t = i / 255;
@@ -254,49 +219,82 @@
         displayMinHz = Math.max(ABS_MIN_HZ, Math.min(maxAllowedMin, newMinHz));
         displayMaxHz = displayMinHz + displaySpanHz;
 
-        panSlider.max = String(Math.round(maxAllowedMin));
-        panSlider.value = String(Math.round(displayMinHz));
-        zoomSlider.value = String(Math.round(displaySpanHz));
         rangeLabel.textContent = `${Math.round(displayMinHz)}–${Math.round(displayMaxHz)} Гц`;
         needsFullWaterfallRedraw = true;
       }
 
-      panSlider.addEventListener('input', () => {
-        updateViewportBounds(Number(panSlider.value), displaySpanHz);
-      });
-
-      zoomSlider.addEventListener('input', () => {
-        const centerHz = displayMinHz + displaySpanHz * 0.5;
-        const nextSpan = Number(zoomSlider.value);
-        updateViewportBounds(centerHz - nextSpan * 0.5, nextSpan);
-      });
-
-      // Horizontal drag-to-pan on canvas
-      let isDraggingCanvas = false;
+      // Multi-touch pointer tracking for 1-finger drag pan and 2-finger pinch-to-zoom
+      const activePointers = new Map();
       let dragStartX = 0;
       let dragStartMinHz = 0;
+      let pinchStartDist = 0;
+      let pinchStartSpanHz = 4200;
+      let pinchAnchorFreq = 2400;
+
+      function getCanvasRelativeX(clientX) {
+        const rect = canvas.getBoundingClientRect();
+        return clientX - rect.left;
+      }
+
+      function initGestureState() {
+        const pts = Array.from(activePointers.values());
+        if (pts.length === 1) {
+          dragStartX = pts[0].x;
+          dragStartMinHz = displayMinHz;
+        } else if (pts.length >= 2) {
+          const p1 = pts[0];
+          const p2 = pts[1];
+          pinchStartDist = Math.max(24, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+          pinchStartSpanHz = displaySpanHz;
+          const midRelX = getCanvasRelativeX((p1.x + p2.x) * 0.5);
+          const normX = Math.max(0, Math.min(1, midRelX / Math.max(1, canvasWidth)));
+          pinchAnchorFreq = displayMinHz + normX * displaySpanHz;
+        }
+      }
 
       canvas.addEventListener('pointerdown', (e) => {
-        isDraggingCanvas = true;
-        dragStartX = e.clientX;
-        dragStartMinHz = displayMinHz;
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (canvas.setPointerCapture) {
           try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
         }
+        initGestureState();
       });
 
       window.addEventListener('pointermove', (e) => {
-        if (!isDraggingCanvas) return;
-        const dx = e.clientX - dragStartX;
-        const hzPerPx = displaySpanHz / Math.max(1, canvasWidth);
-        updateViewportBounds(dragStartMinHz - dx * hzPerPx, displaySpanHz);
+        if (!activePointers.has(e.pointerId)) return;
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        const pts = Array.from(activePointers.values());
+        if (pts.length === 1) {
+          const dx = pts[0].x - dragStartX;
+          const hzPerPx = displaySpanHz / Math.max(1, canvasWidth);
+          updateViewportBounds(dragStartMinHz - dx * hzPerPx, displaySpanHz);
+          if (!isRunning) drawVisualizer();
+        } else if (pts.length >= 2) {
+          const p1 = pts[0];
+          const p2 = pts[1];
+          const currentDist = Math.max(24, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+          const scaleFactor = pinchStartDist / currentDist;
+          const nextSpan = Math.max(1000, Math.min(4200, pinchStartSpanHz * scaleFactor));
+
+          const midRelX = getCanvasRelativeX((p1.x + p2.x) * 0.5);
+          const normX = Math.max(0, Math.min(1, midRelX / Math.max(1, canvasWidth)));
+          const nextMin = pinchAnchorFreq - normX * nextSpan;
+
+          updateViewportBounds(nextMin, nextSpan);
+          if (!isRunning) drawVisualizer();
+        }
       });
 
-      function stopCanvasDrag() {
-        isDraggingCanvas = false;
+      function handlePointerEnd(e) {
+        if (!activePointers.has(e.pointerId)) return;
+        activePointers.delete(e.pointerId);
+        if (activePointers.size > 0) {
+          initGestureState();
+        }
       }
-      window.addEventListener('pointerup', stopCanvasDrag);
-      window.addEventListener('pointercancel', stopCanvasDrag);
+      window.addEventListener('pointerup', handlePointerEnd);
+      window.addEventListener('pointercancel', handlePointerEnd);
 
       // Mouse wheel zoom/pan support
       canvas.addEventListener('wheel', (e) => {
@@ -307,9 +305,10 @@
         } else {
           const factor = e.deltaY > 0 ? 1.08 : 0.92;
           const centerHz = displayMinHz + displaySpanHz * 0.5;
-          const nextSpan = Math.max(1200, Math.min(4200, displaySpanHz * factor));
+          const nextSpan = Math.max(1000, Math.min(4200, displaySpanHz * factor));
           updateViewportBounds(centerHz - nextSpan * 0.5, nextSpan);
         }
+        if (!isRunning) drawVisualizer();
       }, { passive: false });
 
       function resizeCanvas() {
@@ -337,7 +336,7 @@
         if (!isRunning) return;
         isCalibratingHold = true;
         calibrateHoldBtn.classList.add('calibrating-active');
-        calibBtnDot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-ping';
+        calibBtnDot.className = 'w-2 h-2 rounded-full bg-[#f5efe6] animate-ping';
         calibBtnText.textContent = 'ФИКСАЦИЯ ЛИНИЙ ПО ШЁПОТУ... ОТПУСТИТЕ ДЛЯ ГОТОВНОСТИ';
       }
 
@@ -346,7 +345,7 @@
         if (e && e.cancelable) e.preventDefault();
         isCalibratingHold = false;
         calibrateHoldBtn.classList.remove('calibrating-active');
-        calibBtnDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        calibBtnDot.className = 'w-2 h-2 rounded-full bg-[#d6c7b2]';
         calibBtnText.textContent = 'УДЕРЖИВАЙТЕ ДЛЯ КАЛИБРОВКИ ПУНКТИРНЫХ ЛИНИЙ';
       }
 
@@ -358,15 +357,15 @@
 
       function updateMicButtonUI(active) {
         if (active) {
-          micStatusDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+          micStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
           micToggleText.textContent = 'Микрофон: Вкл';
           micToggleBtn.className =
-            'px-3 py-1.5 rounded-lg bg-amber-500/25 border border-amber-400/70 text-amber-100 font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0';
+            'px-3 py-1.5 rounded-lg bg-[#332d27] border border-[#786c5e] text-[#f5efe6] font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0';
         } else {
           micStatusDot.className = 'w-2 h-2 rounded-full bg-stone-500';
           micToggleText.textContent = 'Микрофон: Выкл';
           micToggleBtn.className =
-            'px-3 py-1.5 rounded-lg bg-stone-800/70 border border-stone-700 text-stone-300 font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0';
+            'px-3 py-1.5 rounded-lg bg-[#26221e] border border-[#3d3731] text-[#a8a096] font-semibold text-xs flex items-center gap-2 active:scale-95 transition cursor-pointer shrink-0';
         }
       }
 
@@ -757,11 +756,11 @@
           needsFullWaterfallRedraw = false;
           const fullImg = waterfallCtx.createImageData(w, h);
           const data = fullImg.data;
-          // Fill warm espresso background
+          // Fill cold deep dark-green background matching LUT 0.0
           for (let i = 0; i < data.length; i += 4) {
-            data[i] = 16;
-            data[i + 1] = 10;
-            data[i + 2] = 6;
+            data[i] = 10;
+            data[i + 1] = 24;
+            data[i + 2] = 22;
             data[i + 3] = 255;
           }
           const maxRows = Math.min(ridgeHistory.length, Math.ceil(h / WATERFALL_SPEED_PX));
@@ -793,7 +792,7 @@
         updateWaterfallBitmap();
         ctx.drawImage(waterfallCanvas, 0, wfTop, w, waterfallHeight);
 
-        // 2. Draw subtle warm frequency grid lines over the waterfall
+        // 2. Draw subtle frequency grid lines over the waterfall
         ctx.lineWidth = 1;
         ctx.font = '500 10px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
@@ -803,7 +802,7 @@
 
         for (let freq = firstGridHz; freq <= displayMaxHz; freq += gridStepHz) {
           const x = freqToX(freq, w);
-          ctx.strokeStyle = 'rgba(251, 191, 36, 0.11)';
+          ctx.strokeStyle = 'rgba(231, 226, 218, 0.11)';
           ctx.beginPath();
           ctx.moveTo(x, wfTop);
           ctx.lineTo(x, h);
@@ -811,7 +810,7 @@
         }
 
         // 3. Draw top live spectrum strip (shows current formant hills and frequencies)
-        ctx.fillStyle = '#160e09';
+        ctx.fillStyle = '#1b1917';
         ctx.fillRect(0, 0, w, wfTop);
 
         if (ridgeHistory.length > 0 && analyser) {
@@ -834,20 +833,20 @@
           ctx.closePath();
 
           const envGrad = ctx.createLinearGradient(0, wfTop - 64, 0, wfTop - 20);
-          envGrad.addColorStop(0, 'rgba(245, 158, 11, 0.42)');
-          envGrad.addColorStop(1, 'rgba(217, 119, 6, 0.04)');
+          envGrad.addColorStop(0, 'rgba(214, 199, 178, 0.34)');
+          envGrad.addColorStop(1, 'rgba(214, 199, 178, 0.03)');
           ctx.fillStyle = envGrad;
           ctx.fill();
 
-          ctx.strokeStyle = 'rgba(251, 191, 36, 0.88)';
+          ctx.strokeStyle = 'rgba(231, 226, 218, 0.85)';
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
 
         // 4. Draw frequency ruler along the bottom edge of the top strip (above waterfall)
-        ctx.fillStyle = '#21150e';
+        ctx.fillStyle = '#24211e';
         ctx.fillRect(0, wfTop - 20, w, 20);
-        ctx.strokeStyle = 'rgba(120, 75, 45, 0.8)';
+        ctx.strokeStyle = 'rgba(92, 83, 73, 0.8)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, wfTop);
@@ -857,14 +856,14 @@
         for (let freq = Math.ceil(displayMinHz / 100) * 100; freq <= displayMaxHz; freq += 100) {
           const x = freqToX(freq, w);
           const isMajor = freq % gridStepHz === 0;
-          ctx.strokeStyle = isMajor ? 'rgba(217, 160, 102, 0.65)' : 'rgba(217, 160, 102, 0.25)';
+          ctx.strokeStyle = isMajor ? 'rgba(184, 175, 164, 0.65)' : 'rgba(184, 175, 164, 0.25)';
           ctx.beginPath();
           ctx.moveTo(x, wfTop - (isMajor ? 6 : 3));
           ctx.lineTo(x, wfTop);
           ctx.stroke();
 
           if (isMajor) {
-            ctx.fillStyle = '#a88468';
+            ctx.fillStyle = '#a8a096';
             ctx.font = '500 10px "JetBrains Mono", monospace';
             ctx.fillText(`${freq}`, x, wfTop - 7);
           }
@@ -916,7 +915,7 @@
           // Subtle leader line from badge to exact peak dot
           const boxY = 4;
           const boxH = 17;
-          ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+          ctx.strokeStyle = 'rgba(214, 199, 178, 0.55)';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(peak.labelCenterX, boxY + boxH);
@@ -924,22 +923,22 @@
           ctx.stroke();
 
           // Small pointer dot on the live envelope hill
-          ctx.fillStyle = '#fffbeb';
+          ctx.fillStyle = '#ffffff';
           ctx.beginPath();
           ctx.arc(peak.px, peak.py, 3.2, 0, Math.PI * 2);
           ctx.fill();
 
           // Live formant frequency tag above the hill
           const boxX = peak.labelCenterX - peak.boxW * 0.5;
-          ctx.fillStyle = 'rgba(28, 18, 12, 0.92)';
-          ctx.strokeStyle = 'rgba(245, 158, 11, 0.75)';
+          ctx.fillStyle = 'rgba(33, 30, 27, 0.94)';
+          ctx.strokeStyle = 'rgba(214, 199, 178, 0.75)';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.roundRect(boxX, boxY, peak.boxW, boxH, 4);
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = '#fde68a';
+          ctx.fillStyle = '#f5efe6';
           ctx.font = '700 10px "JetBrains Mono", monospace';
           ctx.textAlign = 'center';
           ctx.fillText(peak.label, peak.labelCenterX, boxY + 12);
@@ -955,8 +954,8 @@
           ctx.setLineDash([7, 6]);
           ctx.lineWidth = 2;
           ctx.strokeStyle = isCalibratingHold
-            ? 'rgba(254, 240, 138, 0.98)'
-            : 'rgba(251, 146, 60, 0.88)';
+            ? 'rgba(255, 255, 255, 0.98)'
+            : 'rgba(231, 226, 218, 0.9)';
           ctx.beginPath();
           ctx.moveTo(rx, wfTop);
           ctx.lineTo(rx, h);
@@ -972,15 +971,15 @@
           const badgeX = Math.max(2, Math.min(w - badgeW - 2, rx - badgeW * 0.5));
           const badgeY = wfTop - 18;
 
-          ctx.fillStyle = '#2a170d';
-          ctx.strokeStyle = isCalibratingHold ? '#fef08a' : '#fb923c';
+          ctx.fillStyle = '#2c2723';
+          ctx.strokeStyle = isCalibratingHold ? '#ffffff' : '#d6c7b2';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = '#fed7aa';
+          ctx.fillStyle = '#f5efe6';
           ctx.textAlign = 'center';
           ctx.fillText(refText, badgeX + badgeW * 0.5, badgeY + 11.5);
         });
