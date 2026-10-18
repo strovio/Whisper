@@ -61,92 +61,97 @@
 <body class="w-full h-full flex flex-col justify-between relative">
 
   <!-- Main interactive wrapper -->
-  <div id="app-shell" class="w-full h-full flex flex-col justify-between p-3 sm:p-4 relative z-10">
+  <div id="app-shell" class="w-full h-full flex flex-col justify-between p-2.5 sm:p-4 relative z-10">
 
     <!-- Top Feedback & Praise Banner -->
     <header class="w-full flex flex-col gap-2 shrink-0">
-      <div id="praise-card" class="w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-4 py-3 flex items-center justify-between transition-all duration-300 shadow-lg">
+      <div id="praise-card" class="w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-3.5 py-2.5 flex items-center justify-between transition-all duration-300 shadow-lg">
         <div class="flex items-center gap-3 min-w-0">
           <!-- Status Orb -->
           <div id="status-orb" class="w-4 h-4 rounded-full bg-slate-600 shrink-0 transition-all duration-300"></div>
           <div class="truncate">
-            <div id="praise-title" class="text-base sm:text-lg font-bold tracking-tight text-slate-200 truncate">
+            <div id="praise-title" class="text-sm sm:text-lg font-bold tracking-tight text-slate-200 truncate">
               Ожидание микрофона
             </div>
             <div id="praise-subtitle" class="text-xs sm:text-sm text-slate-400 truncate">
-              Шепчите текст арии на едином пространстве
+              Прошепчите «У» для захвата эталонных рельсов
             </div>
           </div>
         </div>
 
-        <!-- Continuity / Hold Timer Badge -->
-        <div id="streak-badge" class="hidden sm:flex flex-col items-end shrink-0 pl-2">
-          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Удержание</span>
+        <!-- Continuity / Stability Score Badge -->
+        <div id="streak-badge" class="flex flex-col items-end shrink-0 pl-2">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Внутри «У»</span>
           <span id="hold-timer" class="mono text-sm font-bold text-emerald-400">0.0 с</span>
         </div>
       </div>
 
-      <!-- Live Detected Formants Pills -->
-      <div class="grid grid-cols-2 gap-2 w-full">
-        <!-- Formant 1 Pill (Lower Singer's Formant ~2460 Hz) -->
-        <div id="pill-f1" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-3 py-2 flex items-center justify-between transition-all duration-200">
-          <div class="flex items-center gap-2">
-            <span id="dot-f1" class="w-2.5 h-2.5 rounded-full bg-cyan-400/30 transition-all"></span>
-            <span class="text-xs font-semibold text-slate-300">1-я форманта</span>
+      <!-- Live Formant Position & Spread Diagnostics Pills -->
+      <div class="grid grid-cols-3 gap-1.5 sm:gap-2 w-full">
+        <!-- Formant 1 Position Pill -->
+        <div id="pill-f1" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-cyan-400/90">1-я (Купол)</span>
+            <span id="drift-f1" class="mono text-[10px] font-bold text-slate-500">эталон</span>
           </div>
-          <span id="val-f1" class="mono text-xs sm:text-sm font-bold text-cyan-400/50">— Гц</span>
+          <span id="val-f1" class="mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5">— Гц</span>
         </div>
 
-        <!-- Formant 2 Pill (Upper Whisper Formant ~3060 Hz) -->
-        <div id="pill-f2" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-3 py-2 flex items-center justify-between transition-all duration-200">
-          <div class="flex items-center gap-2">
-            <span id="dot-f2" class="w-2.5 h-2.5 rounded-full bg-amber-400/30 transition-all"></span>
-            <span class="text-xs font-semibold text-slate-300">2-я форманта</span>
+        <!-- Spread / Locking Indicator Pill -->
+        <div id="pill-spread" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between items-center text-center transition-all duration-200">
+          <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ширина «У»</span>
+          <span id="val-spread" class="mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5">Калибровка</span>
+        </div>
+
+        <!-- Formant 2 Position Pill -->
+        <div id="pill-f2" class="rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-amber-400/90">2-я (Блеск)</span>
+            <span id="drift-f2" class="mono text-[10px] font-bold text-slate-500">эталон</span>
           </div>
-          <span id="val-f2" class="mono text-xs sm:text-sm font-bold text-amber-400/50">— Гц</span>
+          <span id="val-f2" class="mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5">— Гц</span>
         </div>
       </div>
     </header>
 
-    <!-- Center Interactive Canvas Container -->
-    <main class="w-full flex-1 my-2 relative rounded-2xl overflow-hidden bg-slate-950/90 border border-slate-800/80 shadow-inner flex flex-col">
-      <canvas id="visualizer-canvas" class="w-full h-full block"></canvas>
+    <!-- Center Interactive Waterfall Container -->
+    <main class="w-full flex-1 my-2 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800/90 shadow-inner flex flex-col">
+      <canvas id="visualizer-canvas" class="w-full h-full block cursor-pointer" title="Нажмите на водопад, чтобы перезаписать эталонную гласную «У»"></canvas>
 
-      <!-- Subtle floating sensitivity control (only visible after mic starts) -->
-      <div id="controls-bar" class="hidden absolute bottom-2.5 left-3 right-3 flex items-center justify-between pointer-events-none">
-        <div class="pointer-events-auto flex items-center gap-2 bg-slate-900/85 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl">
-          <span class="text-[11px] text-slate-400 font-medium">Чувствительность</span>
-          <input id="sensitivity-slider" type="range" min="-15" max="20" value="4" step="1"
-            class="w-20 sm:w-28 accent-cyan-400 h-1.5 bg-slate-700 rounded-lg cursor-pointer" />
+      <!-- Floating minimal controls (only visible after mic starts) -->
+      <div id="controls-bar" class="hidden absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 pointer-events-none">
+        <div class="pointer-events-auto flex items-center gap-2 bg-slate-900/85 backdrop-blur-md border border-slate-800/90 px-2.5 py-1.5 rounded-xl">
+          <span class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Порог тишины</span>
+          <input id="sensitivity-slider" type="range" min="-15" max="20" value="6" step="1"
+            class="w-16 sm:w-24 accent-cyan-400 h-1.5 bg-slate-700 rounded-lg cursor-pointer" />
         </div>
 
         <button id="recalibrate-btn" type="button"
-          class="pointer-events-auto text-[11px] font-medium text-slate-300 hover:text-white bg-slate-900/85 backdrop-blur-md border border-slate-800 active:scale-95 transition px-3 py-1.5 rounded-xl">
-          Сброс зон
+          class="pointer-events-auto text-[11px] font-semibold text-emerald-300 hover:text-white bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 active:scale-95 transition px-3 py-1.5 rounded-xl shadow-md">
+          Перезахватить «У»
         </button>
       </div>
     </main>
 
     <!-- Minimalist Legend Footer -->
     <footer class="w-full flex items-center justify-between text-[11px] text-slate-400 px-1 shrink-0">
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
         <span class="inline-flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>Купол (F3)
+          <span class="w-2.5 h-2.5 rounded-sm border border-dashed border-cyan-400 bg-cyan-400/20"></span>Рельсы «У»
         </span>
         <span class="inline-flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-amber-400"></span>Блеск (F4)
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>Вмонтировано в «У»
         </span>
         <span class="inline-flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>Обе сразу = Похвала
+          <span class="w-2 h-2 rounded-full bg-rose-400"></span>Разъехались
         </span>
       </div>
-      <span id="mobile-hold-readout" class="sm:hidden mono font-bold text-emerald-400">0.0 с</span>
+      <span class="text-[10px] text-slate-500 hidden sm:inline">Тап по водопаду = новая «У»</span>
     </footer>
 
     <!-- Initial One-Button Microphone Start Overlay -->
     <div id="start-overlay" class="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
       <div class="max-w-sm w-full flex flex-col items-center">
-        <!-- Acoustic Icon -->
         <div class="relative mb-6 flex items-center justify-center">
           <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-500/20 to-amber-500/20 mic-pulse absolute"></div>
           <button id="start-mic-btn" type="button"
@@ -160,10 +165,11 @@
         </div>
 
         <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight mb-2">
-          Whisper Chiaroscuro
+          Водопад Whisper Chiaroscuro
         </h1>
         <p class="text-sm text-slate-300 leading-relaxed mb-6">
-          Нажмите на микрофон и проговаривайте гласные или текст арии <strong>направленным шёпотом</strong>. Программа автоматически найдёт две ваши высокие форманты и покажет, удерживаете ли вы их одновременно.
+          1. Включите микрофон и прошепчите эталонную гласную <strong>«У»</strong> — программа зафиксирует два вертикальных коридора.<br/>
+          2. Шепчите текст арии, удерживая все остальные гласные <strong>вмонтированными в рельсы «У»</strong>, чтобы дорожки не разъезжались.
         </p>
 
         <button id="start-mic-text-btn" type="button"
@@ -171,7 +177,6 @@
           Включить микрофон
         </button>
 
-        <!-- Error Message Box (No alert() used) -->
         <div id="mic-error-box" class="hidden mt-4 p-3.5 rounded-xl bg-rose-950/90 border border-rose-700 text-rose-200 text-xs text-left leading-relaxed"></div>
       </div>
     </div>
@@ -180,39 +185,50 @@
 
   <script>
     (function () {
-      // Frequency window focused on Whisper Chiaroscuro (Ken Bozeman method)
-      // Shows from 1300 Hz to 4500 Hz where F3 (~2460 Hz) and F4 (~3060 Hz) live
-      const MIN_DISPLAY_HZ = 1300;
-      const MAX_DISPLAY_HZ = 4500;
+      // Frequency window focused on Whisper Chiaroscuro (1450 Hz to 4250 Hz)
+      const MIN_DISPLAY_HZ = 1450;
+      const MAX_DISPLAY_HZ = 4250;
 
       // Search bounds for the two high whisper formants
-      const SEARCH_MIN_HZ = 1800;
-      const SEARCH_MAX_HZ = 4200;
+      const SEARCH_MIN_HZ = 1750;
+      const SEARCH_MAX_HZ = 4050;
       const MIN_PEAK_SEPARATION_HZ = 310;
       const MAX_PEAK_SEPARATION_HZ = 1350;
 
-      // Default personal anchor zones (inspired by user's ~2461 Hz and ~3059 Hz, adapts automatically)
-      const DEFAULT_ANCHOR_F1 = 2461;
-      const DEFAULT_ANCHOR_F2 = 3059;
+      // Allowed deviation (Hz) from the calibrated "У" rails before warning that formants spread apart
+      const RAIL_TOLERANCE_HZ = 185;
 
-      let anchorF1 = DEFAULT_ANCHOR_F1;
-      let anchorF2 = DEFAULT_ANCHOR_F2;
+      // Default starting anchors (around user's ~2461 Hz and ~3059 Hz) prior to "У" lock
+      const DEFAULT_REF_F1 = 2461;
+      const DEFAULT_REF_F2 = 3059;
 
-      // Smoothed real-time detected peak positions for fluid visual rendering
-      let smoothPeak1Hz = DEFAULT_ANCHOR_F1;
-      let smoothPeak2Hz = DEFAULT_ANCHOR_F2;
-      let peak1Confidence = 0; // 0..1
-      let peak2Confidence = 0; // 0..1
+      let refF1 = DEFAULT_REF_F1;
+      let refF2 = DEFAULT_REF_F2;
 
-      // Praise & Hold tracking
+      // Calibration state: locks automatically on the first stable whispered "У" (~0.75 sec)
+      let isCalibrated = false;
+      let calibrationProgress = 0; // 0..1
+      let calibAccumF1 = 0;
+      let calibAccumF2 = 0;
+      let calibSamples = 0;
+
+      // Real-time smoothed detected formant positions
+      let smoothPeak1Hz = DEFAULT_REF_F1;
+      let smoothPeak2Hz = DEFAULT_REF_F2;
+      let peak1Confidence = 0;
+      let peak2Confidence = 0;
+
+      // Stability & Hold timers
       let holdDurationSec = 0;
       let lastFrameTime = performance.now();
-      let bothGraceTimer = 0; // Prevents flicker on quick consonants between vowels
+      let graceTimer = 0;
       let praiseLevel = 0;
 
-      // Trail history buffer for the bottom vowel-continuity ribbon
-      const MAX_HISTORY_POINTS = 260;
-      const historyTrail = [];
+      // Waterfall history of formant center tracks (for crisp overlay trajectories)
+      // Each entry corresponds to a vertical shift of WATERFALL_SPEED_PX
+      const WATERFALL_SPEED_PX = 2;
+      const TOP_SOCKET_BAR_HEIGHT = 64;
+      let trackHistory = [];
 
       // Audio Web API objects
       let audioCtx = null;
@@ -220,9 +236,9 @@
       let rawFreqData = null;
       let smoothedEnvelope = null;
       let temporalSpectrum = null;
+      let normalizedRidge = null; // Loudness-independent formant position ridge (0..1)
       let isRunning = false;
 
-      // DOM Elements
       const appShell = document.getElementById('app-shell');
       const startOverlay = document.getElementById('start-overlay');
       const startMicBtn = document.getElementById('start-mic-btn');
@@ -237,46 +253,79 @@
       const praiseTitle = document.getElementById('praise-title');
       const praiseSubtitle = document.getElementById('praise-subtitle');
       const holdTimerEl = document.getElementById('hold-timer');
-      const mobileHoldReadout = document.getElementById('mobile-hold-readout');
 
       const pillF1 = document.getElementById('pill-f1');
       const pillF2 = document.getElementById('pill-f2');
-      const dotF1 = document.getElementById('dot-f1');
-      const dotF2 = document.getElementById('dot-f2');
+      const pillSpread = document.getElementById('pill-spread');
       const valF1 = document.getElementById('val-f1');
       const valF2 = document.getElementById('val-f2');
+      const valSpread = document.getElementById('val-spread');
+      const driftF1 = document.getElementById('drift-f1');
+      const driftF2 = document.getElementById('drift-f2');
 
       const canvas = document.getElementById('visualizer-canvas');
       const ctx = canvas.getContext('2d');
 
-      let canvasWidth = 300;
-      let canvasHeight = 400;
+      // Offscreen bitmap buffer for smooth scrolling colorful waterfall
+      const waterfallCanvas = document.createElement('canvas');
+      const waterfallCtx = waterfallCanvas.getContext('2d');
+
+      let canvasWidth = 320;
+      let canvasHeight = 460;
+      let waterfallHeight = 396;
       let dpr = window.devicePixelRatio || 1;
 
       function resizeCanvas() {
-        dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        dpr = Math.min(window.devicePixelRatio || 1, 2.0);
         const rect = canvas.getBoundingClientRect();
-        canvasWidth = Math.max(200, rect.width);
-        canvasHeight = Math.max(200, rect.height);
+        canvasWidth = Math.max(240, Math.floor(rect.width));
+        canvasHeight = Math.max(240, Math.floor(rect.height));
+        waterfallHeight = Math.max(120, canvasHeight - TOP_SOCKET_BAR_HEIGHT);
+
         canvas.width = Math.round(canvasWidth * dpr);
         canvas.height = Math.round(canvasHeight * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Preserve existing waterfall image on resize
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = waterfallCanvas.width || canvasWidth;
+        tempCanvas.height = waterfallCanvas.height || waterfallHeight;
+        tempCanvas.getContext('2d').drawImage(waterfallCanvas, 0, 0);
+
+        waterfallCanvas.width = canvasWidth;
+        waterfallCanvas.height = waterfallHeight;
+        waterfallCtx.fillStyle = '#050811';
+        waterfallCtx.fillRect(0, 0, canvasWidth, waterfallHeight);
+        waterfallCtx.drawImage(tempCanvas, 0, 0, canvasWidth, waterfallHeight);
       }
 
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
 
-      // Reset adaptive target zones to default
-      recalibrateBtn.addEventListener('click', () => {
-        anchorF1 = DEFAULT_ANCHOR_F1;
-        anchorF2 = DEFAULT_ANCHOR_F2;
+      function startNewUCalibration() {
+        isCalibrated = false;
+        calibrationProgress = 0;
+        calibAccumF1 = 0;
+        calibAccumF2 = 0;
+        calibSamples = 0;
+        holdDurationSec = 0;
+      }
+
+      recalibrateBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startNewUCalibration();
+      });
+
+      // Tapping anywhere on the waterfall canvas triggers a fresh "У" calibration
+      canvas.addEventListener('click', () => {
+        if (isRunning) {
+          startNewUCalibration();
+        }
       });
 
       async function startMicrophone() {
         micErrorBox.classList.add('hidden');
         try {
-          // Crucial for Whisper Chiaroscuro: disable noiseSuppression and autoGainControl
-          // so mobile browsers don't filter out high-frequency whisper turbulence!
           let stream;
           try {
             stream = await navigator.mediaDevices.getUserMedia({
@@ -299,8 +348,8 @@
 
           const source = audioCtx.createMediaStreamSource(stream);
           analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 4096; // High resolution (~11.7 Hz per bin at 48kHz)
-          analyser.smoothingTimeConstant = 0.68;
+          analyser.fftSize = 4096;
+          analyser.smoothingTimeConstant = 0.62;
 
           source.connect(analyser);
 
@@ -308,11 +357,13 @@
           rawFreqData = new Float32Array(binCount);
           smoothedEnvelope = new Float32Array(binCount);
           temporalSpectrum = new Float32Array(binCount);
+          normalizedRidge = new Float32Array(binCount);
           temporalSpectrum.fill(-100);
 
           startOverlay.classList.add('hidden');
           controlsBar.classList.remove('hidden');
           resizeCanvas();
+          startNewUCalibration();
 
           isRunning = true;
           lastFrameTime = performance.now();
@@ -345,23 +396,22 @@
         const minDispBin = freqToBin(MIN_DISPLAY_HZ, sampleRate, binCount);
         const maxDispBin = freqToBin(MAX_DISPLAY_HZ, sampleRate, binCount);
 
-        // 1. Temporal smoothing + slight high-frequency tilt (+3.5 dB/oct above 1.5kHz)
-        // so the 3000+ Hz 2nd formant has comparable visual prominence to the 2400 Hz 1st formant
+        // 1. Temporal smoothing + high-frequency pre-emphasis so F4 (~3060 Hz) matches F3 (~2460 Hz)
         for (let b = minDispBin; b <= maxDispBin; b++) {
           let val = rawFreqData[b];
           if (!Number.isFinite(val) || val < -120) val = -120;
           const freq = binToFreq(b, sampleRate, binCount);
-          const preEmphasisDb = Math.max(0, (freq - 1500) / 1000) * 3.2;
+          const preEmphasisDb = Math.max(0, (freq - 1500) / 1000) * 3.4;
           const boosted = val + preEmphasisDb;
-          temporalSpectrum[b] = temporalSpectrum[b] * 0.62 + boosted * 0.38;
+          temporalSpectrum[b] = temporalSpectrum[b] * 0.58 + boosted * 0.42;
         }
 
-        // 2. Spectral Envelope Smoothing (Gaussian-like moving average across ~160 Hz window)
-        // Turns jagged broadband whisper turbulence into smooth vocal-tract formant hills
-        const halfWindowBins = Math.max(4, Math.round(85 / (sampleRate / (binCount * 2))));
+        // 2. Smooth spectral envelope across ~160 Hz to reveal formant hills
+        const halfWindowBins = Math.max(4, Math.round(80 / (sampleRate / (binCount * 2))));
         let sumEnv = 0;
         let countEnv = 0;
         let maxEnvDb = -120;
+        let minEnvDb = 0;
 
         for (let b = minDispBin; b <= maxDispBin; b++) {
           let weightedSum = 0;
@@ -379,32 +429,48 @@
           sumEnv += envVal;
           countEnv++;
           if (envVal > maxEnvDb) maxEnvDb = envVal;
+          if (envVal < minEnvDb) minEnvDb = envVal;
         }
 
         const meanEnvDb = countEnv > 0 ? sumEnv / countEnv : -100;
         const userSensitivityOffset = parseFloat(sensitivitySlider.value) || 0;
+        const absoluteGateDb = -84 - userSensitivityOffset;
+        const isWhisperPresent = maxEnvDb > absoluteGateDb && (maxEnvDb - meanEnvDb) > 2.0;
 
-        // Minimum energy threshold so room silence doesn't trigger peaks
-        const absoluteGateDb = -83 - userSensitivityOffset;
-        const isWhisperPresent = maxEnvDb > absoluteGateDb && (maxEnvDb - meanEnvDb) > 2.2;
-
-        if (!isWhisperPresent) {
-          return {
-            hasSound: false,
-            peak1: null,
-            peak2: null,
-            meanEnvDb,
-            maxEnvDb
-          };
+        // 3. Compute Loudness-Independent Ridge Intensity (0..1) for the Waterfall
+        // Even if the user whispers very softly, local peaks are normalized to [0..1]
+        // so the waterfall shows FORMANT POSITION rather than loudness!
+        const spanRadius = Math.max(12, Math.round(320 / (sampleRate / (binCount * 2))));
+        for (let b = minDispBin; b <= maxDispBin; b++) {
+          if (!isWhisperPresent) {
+            normalizedRidge[b] = 0;
+            continue;
+          }
+          let localMin = smoothedEnvelope[b];
+          let localMax = smoothedEnvelope[b];
+          for (let k = -spanRadius; k <= spanRadius; k += 2) {
+            const idx = Math.max(minDispBin, Math.min(maxDispBin, b + k));
+            const v = smoothedEnvelope[idx];
+            if (v < localMin) localMin = v;
+            if (v > localMax) localMax = v;
+          }
+          const localRange = Math.max(2.5, localMax - localMin);
+          const localNorm = Math.max(0, Math.min(1, (smoothedEnvelope[b] - localMin) / localRange));
+          const globalNorm = Math.max(0, Math.min(1, (smoothedEnvelope[b] - meanEnvDb) / Math.max(3.5, maxEnvDb - meanEnvDb)));
+          // Sharpen the ridge with a power curve so formant tracks stand out crisply
+          normalizedRidge[b] = Math.pow(localNorm * 0.68 + globalNorm * 0.32, 1.65);
         }
 
-        // 3. Find all local maxima inside [SEARCH_MIN_HZ, SEARCH_MAX_HZ]
+        if (!isWhisperPresent) {
+          return { hasSound: false, peak1: null, peak2: null };
+        }
+
         const searchStartBin = freqToBin(SEARCH_MIN_HZ, sampleRate, binCount);
         const searchEndBin = freqToBin(SEARCH_MAX_HZ, sampleRate, binCount);
         const candidates = [];
 
         const neighborCheck = Math.max(3, Math.round(55 / (sampleRate / (binCount * 2))));
-        const prominenceRadiusBins = Math.max(10, Math.round(280 / (sampleRate / (binCount * 2))));
+        const prominenceRadiusBins = Math.max(10, Math.round(270 / (sampleRate / (binCount * 2))));
 
         for (let b = searchStartBin; b <= searchEndBin; b++) {
           const val = smoothedEnvelope[b];
@@ -417,7 +483,6 @@
           }
           if (!isLocalMax) continue;
 
-          // Calculate local prominence above surrounding troughs
           let leftMin = val;
           for (let k = b - 1; k >= Math.max(minDispBin, b - prominenceRadiusBins); k--) {
             if (smoothedEnvelope[k] < leftMin) leftMin = smoothedEnvelope[k];
@@ -430,8 +495,7 @@
           const prominence = val - Math.max(leftMin, rightMin);
           const heightAboveMean = val - meanEnvDb;
 
-          // Require peak to rise noticeably above average whisper floor
-          if (heightAboveMean > Math.max(1.8, 3.8 - userSensitivityOffset * 0.12) && prominence > 0.65) {
+          if (heightAboveMean > Math.max(1.5, 3.4 - userSensitivityOffset * 0.12) && prominence > 0.55) {
             candidates.push({
               bin: b,
               freq: binToFreq(b, sampleRate, binCount),
@@ -442,7 +506,7 @@
           }
         }
 
-        // 4. Score pairs of candidate peaks (Peak 1 = lower F3, Peak 2 = higher F4)
+        // Score pairs of candidate peaks (Peak 1 = lower F3, Peak 2 = higher F4)
         let bestPair = null;
         let bestPairScore = -Infinity;
 
@@ -453,31 +517,30 @@
             const sep = p2.freq - p1.freq;
 
             if (sep < MIN_PEAK_SEPARATION_HZ || sep > MAX_PEAK_SEPARATION_HZ) continue;
-            if (p1.freq > 3150 || p2.freq < 2450) continue;
+            if (p1.freq > 3180 || p2.freq < 2400) continue;
 
-            // Check that there is a real valley between p1 and p2
             let valleyDb = Math.min(p1.db, p2.db);
             for (let b = p1.bin + 1; b < p2.bin; b++) {
               if (smoothedEnvelope[b] < valleyDb) valleyDb = smoothedEnvelope[b];
             }
             const dipDepth = Math.min(p1.db, p2.db) - valleyDb;
-            if (dipDepth < 0.75) continue;
+            if (dipDepth < 0.65) continue;
 
-            // Both peaks should be reasonably balanced (within ~15 dB of each other)
             const balanceDiff = Math.abs(p1.db - p2.db);
-            if (balanceDiff > 15.5) continue;
+            if (balanceDiff > 16.5) continue;
 
-            // Proximity bonus to user's adaptive anchors (~2461 and ~3059 Hz)
-            const distF1 = Math.abs(p1.freq - anchorF1);
-            const distF2 = Math.abs(p2.freq - anchorF2);
-            const proximityBonus = Math.max(0, 6 - (distF1 + distF2) / 220);
+            // Gentle continuity bonus near previously detected peaks so tracks don't jump erratically
+            const contDist = Math.abs(p1.freq - smoothPeak1Hz) + Math.abs(p2.freq - smoothPeak2Hz);
+            const continuityBonus = Math.max(0, 4.5 - contDist / 260);
 
             const score =
-              p1.heightAboveMean * 1.4 +
-              p2.heightAboveMean * 1.4 +
-              dipDepth * 2.5 -
-              balanceDiff * 0.35 +
-              proximityBonus;
+              p1.prominence * 1.8 +
+              p2.prominence * 1.8 +
+              p1.heightAboveMean * 1.1 +
+              p2.heightAboveMean * 1.1 +
+              dipDepth * 2.2 -
+              balanceDiff * 0.25 +
+              continuityBonus;
 
             if (score > bestPairScore) {
               bestPairScore = score;
@@ -487,28 +550,27 @@
         }
 
         if (bestPair) {
-          return {
-            hasSound: true,
-            peak1: bestPair.p1,
-            peak2: bestPair.p2,
-            meanEnvDb,
-            maxEnvDb
-          };
+          return { hasSound: true, peak1: bestPair.p1, peak2: bestPair.p2 };
         }
 
-        // 5. If only one peak was found, assign it to whichever formant zone (F1 or F2) it belongs to
         if (candidates.length > 0) {
-          candidates.sort((a, b) => b.heightAboveMean - a.heightAboveMean);
+          candidates.sort((a, b) => b.prominence - a.prominence);
           const strongest = candidates[0];
-          const midBoundary = (anchorF1 + anchorF2) * 0.5;
+          const midBoundary = (refF1 + refF2) * 0.5;
           if (strongest.freq <= midBoundary) {
-            return { hasSound: true, peak1: strongest, peak2: null, meanEnvDb, maxEnvDb };
+            return { hasSound: true, peak1: strongest, peak2: null };
           } else {
-            return { hasSound: true, peak1: null, peak2: strongest, meanEnvDb, maxEnvDb };
+            return { hasSound: true, peak1: null, peak2: strongest };
           }
         }
 
-        return { hasSound: true, peak1: null, peak2: null, meanEnvDb, maxEnvDb };
+        return { hasSound: true, peak1: null, peak2: null };
+      }
+
+      function formatDrift(diffHz) {
+        const rounded = Math.round(diffHz);
+        if (Math.abs(rounded) <= 25) return 'в центре «У»';
+        return (rounded > 0 ? `+${rounded}` : `${rounded}`) + ' Гц';
       }
 
       function updateStateAndUI(analysis, dt) {
@@ -516,123 +578,215 @@
         const hasP2 = Boolean(analysis.peak2);
 
         if (hasP1) {
-          smoothPeak1Hz = smoothPeak1Hz * 0.72 + analysis.peak1.freq * 0.28;
-          peak1Confidence = Math.min(1, peak1Confidence + dt * 5.5);
+          smoothPeak1Hz = smoothPeak1Hz * 0.68 + analysis.peak1.freq * 0.32;
+          peak1Confidence = Math.min(1, peak1Confidence + dt * 6.0);
         } else {
-          peak1Confidence = Math.max(0, peak1Confidence - dt * 3.8);
+          peak1Confidence = Math.max(0, peak1Confidence - dt * 4.2);
         }
 
         if (hasP2) {
-          smoothPeak2Hz = smoothPeak2Hz * 0.72 + analysis.peak2.freq * 0.28;
-          peak2Confidence = Math.min(1, peak2Confidence + dt * 5.5);
+          smoothPeak2Hz = smoothPeak2Hz * 0.68 + analysis.peak2.freq * 0.32;
+          peak2Confidence = Math.min(1, peak2Confidence + dt * 6.0);
         } else {
-          peak2Confidence = Math.max(0, peak2Confidence - dt * 3.8);
+          peak2Confidence = Math.max(0, peak2Confidence - dt * 4.2);
         }
 
-        // Gently adapt the personal target zones when both formants are clearly locked
-        if (hasP1 && hasP2) {
-          anchorF1 = anchorF1 * 0.985 + analysis.peak1.freq * 0.015;
-          anchorF2 = anchorF2 * 0.985 + analysis.peak2.freq * 0.015;
-          bothGraceTimer = 0.24; // 240ms grace window for consonant articulations
-        } else {
-          bothGraceTimer = Math.max(0, bothGraceTimer - dt);
-        }
+        // Automatic calibration on first whispered vowel ("У")
+        if (!isCalibrated) {
+          if (hasP1 && hasP2) {
+            calibrationProgress = Math.min(1, calibrationProgress + dt * 1.35);
+            calibAccumF1 += smoothPeak1Hz;
+            calibAccumF2 += smoothPeak2Hz;
+            calibSamples++;
 
-        const isBothLocked = (hasP1 && hasP2) || bothGraceTimer > 0;
+            refF1 = calibAccumF1 / calibSamples;
+            refF2 = calibAccumF2 / calibSamples;
 
-        // Update Formant 1 Pill
-        if (peak1Confidence > 0.35) {
-          valF1.textContent = `${Math.round(smoothPeak1Hz)} Гц`;
-          valF1.className = 'mono text-xs sm:text-sm font-bold text-cyan-300';
-          dotF1.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]';
-          pillF1.className = 'rounded-xl bg-cyan-950/40 border border-cyan-500/50 px-3 py-2 flex items-center justify-between transition-all duration-150';
-        } else {
-          valF1.textContent = `~${Math.round(anchorF1)} Гц`;
-          valF1.className = 'mono text-xs sm:text-sm font-bold text-slate-500';
-          dotF1.className = 'w-2.5 h-2.5 rounded-full bg-slate-700';
-          pillF1.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-3 py-2 flex items-center justify-between transition-all duration-200';
-        }
+            praiseCard.className =
+              'w-full rounded-2xl bg-cyan-950/60 border border-cyan-500/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
+            statusOrb.className = 'w-4 h-4 rounded-full bg-cyan-400 shadow-[0_0_12px_#22d3ee] shrink-0';
+            praiseTitle.textContent = `Фиксация эталона «У»... ${Math.round(calibrationProgress * 100)}%`;
+            praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-cyan-200 truncate';
+            praiseSubtitle.textContent = `Удерживайте шёпот «У»: ~${Math.round(refF1)} и ~${Math.round(refF2)} Гц`;
+            praiseSubtitle.className = 'text-xs sm:text-sm text-cyan-300/80 truncate';
 
-        // Update Formant 2 Pill
-        if (peak2Confidence > 0.35) {
-          valF2.textContent = `${Math.round(smoothPeak2Hz)} Гц`;
-          valF2.className = 'mono text-xs sm:text-sm font-bold text-amber-300';
-          dotF2.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24]';
-          pillF2.className = 'rounded-xl bg-amber-950/40 border border-amber-500/50 px-3 py-2 flex items-center justify-between transition-all duration-150';
-        } else {
-          valF2.textContent = `~${Math.round(anchorF2)} Гц`;
-          valF2.className = 'mono text-xs sm:text-sm font-bold text-slate-500';
-          dotF2.className = 'w-2.5 h-2.5 rounded-full bg-slate-700';
-          pillF2.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-3 py-2 flex items-center justify-between transition-all duration-200';
-        }
-
-        // Praise Banner Logic
-        if (isBothLocked) {
-          holdDurationSec += dt;
-          praiseLevel = Math.min(1, praiseLevel + dt * 4);
-          appShell.classList.add('praise-active');
-
-          praiseCard.className =
-            'w-full rounded-2xl bg-emerald-950/70 border border-emerald-500/70 px-4 py-3 flex items-center justify-between transition-all duration-200 shadow-lg shadow-emerald-950/50';
-          statusOrb.className =
-            'w-4 h-4 rounded-full bg-emerald-400 shadow-[0_0_14px_#10b981] shrink-0 transition-all';
-
-          if (holdDurationSec < 1.5) {
-            praiseTitle.textContent = 'Отлично! Обе форманты звучат ✨';
-          } else if (holdDurationSec < 3.8) {
-            praiseTitle.textContent = 'Браво! Идеальный баланс Chiaroscuro 🔥';
-          } else if (holdDurationSec < 7.0) {
-            praiseTitle.textContent = 'Супер! Все гласные в едином фокусе 👑';
+            if (calibrationProgress >= 1 && calibSamples >= 8) {
+              isCalibrated = true;
+              graceTimer = 0.3;
+            }
           } else {
-            praiseTitle.textContent = 'Мастерское удержание! Продолжайте 🌟';
-          }
-          praiseTitle.className = 'text-base sm:text-lg font-extrabold tracking-tight text-emerald-300 truncate';
-          praiseSubtitle.textContent = `Связка ${Math.round(smoothPeak1Hz)} Гц + ${Math.round(smoothPeak2Hz)} Гц активна`;
-          praiseSubtitle.className = 'text-xs sm:text-sm text-emerald-200/80 truncate';
-        } else {
-          holdDurationSec = Math.max(0, holdDurationSec - dt * 1.6);
-          praiseLevel = Math.max(0, praiseLevel - dt * 3);
-          appShell.classList.remove('praise-active');
-
-          if (peak1Confidence > 0.45 && peak2Confidence <= 0.45) {
+            calibrationProgress = Math.max(0, calibrationProgress - dt * 0.8);
             praiseCard.className =
-              'w-full rounded-2xl bg-cyan-950/40 border border-cyan-700/60 px-4 py-3 flex items-center justify-between transition-all duration-200';
-            statusOrb.className = 'w-4 h-4 rounded-full bg-cyan-400 shrink-0';
-            praiseTitle.textContent = 'Есть 1-я форманта — добавьте 2-ю (блеск)';
-            praiseTitle.className = 'text-base sm:text-lg font-bold tracking-tight text-cyan-200 truncate';
-            praiseSubtitle.textContent = 'Чуть больше близкого фокуса выдоха для верхнего пика';
-            praiseSubtitle.className = 'text-xs sm:text-sm text-cyan-300/75 truncate';
-          } else if (peak2Confidence > 0.45 && peak1Confidence <= 0.45) {
-            praiseCard.className =
-              'w-full rounded-2xl bg-amber-950/40 border border-amber-700/60 px-4 py-3 flex items-center justify-between transition-all duration-200';
-            statusOrb.className = 'w-4 h-4 rounded-full bg-amber-400 shrink-0';
-            praiseTitle.textContent = 'Есть 2-я форманта — раскройте 1-ю (купол)';
-            praiseTitle.className = 'text-base sm:text-lg font-bold tracking-tight text-amber-200 truncate';
-            praiseSubtitle.textContent = 'Добавьте мягкого объёма в глотке для ~2450 Гц';
-            praiseSubtitle.className = 'text-xs sm:text-sm text-amber-300/75 truncate';
-          } else {
-            praiseCard.className =
-              'w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-4 py-3 flex items-center justify-between transition-all duration-300';
-            statusOrb.className = 'w-4 h-4 rounded-full bg-slate-600 shrink-0';
-            praiseTitle.textContent = 'Шепчите гласные арии...';
-            praiseTitle.className = 'text-base sm:text-lg font-bold tracking-tight text-slate-200 truncate';
-            praiseSubtitle.textContent = 'Ищем два пика одновременно в районе 2000–3800 Гц';
+              'w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-3.5 py-2.5 flex items-center justify-between transition-all duration-300';
+            statusOrb.className = 'w-4 h-4 rounded-full bg-amber-400 shrink-0 animate-pulse';
+            praiseTitle.textContent = 'Шаг 1: Прошепчите эталонную «У»';
+            praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-amber-200 truncate';
+            praiseSubtitle.textContent = 'Программа запомнит положение ваших двух формант на «У»';
             praiseSubtitle.className = 'text-xs sm:text-sm text-slate-400 truncate';
           }
         }
 
-        const holdFormatted = `${holdDurationSec.toFixed(1)} с`;
-        holdTimerEl.textContent = holdFormatted;
-        mobileHoldReadout.textContent = holdFormatted;
+        // Check position stability relative to the locked "У" rails
+        const diff1 = smoothPeak1Hz - refF1;
+        const diff2 = smoothPeak2Hz - refF2;
+        const inRail1 = peak1Confidence > 0.35 && Math.abs(diff1) <= RAIL_TOLERANCE_HZ;
+        const inRail2 = peak2Confidence > 0.35 && Math.abs(diff2) <= RAIL_TOLERANCE_HZ;
 
-        // Record frame into scrolling vowel trail
-        historyTrail.push({
+        const refSpread = refF2 - refF1;
+        const currentSpread = smoothPeak2Hz - smoothPeak1Hz;
+        const spreadDelta = currentSpread - refSpread;
+
+        if (isCalibrated && inRail1 && inRail2) {
+          graceTimer = 0.25; // Smooth across quick consonants
+        } else {
+          graceTimer = Math.max(0, graceTimer - dt);
+        }
+
+        const isMountedInU = isCalibrated && ((inRail1 && inRail2) || graceTimer > 0);
+        const isSpreadingApart =
+          isCalibrated &&
+          peak1Confidence > 0.35 &&
+          peak2Confidence > 0.35 &&
+          (!inRail1 || !inRail2);
+
+        // Update Pill 1 (F3)
+        if (peak1Confidence > 0.35) {
+          valF1.textContent = `${Math.round(smoothPeak1Hz)} Гц`;
+          driftF1.textContent = isCalibrated ? formatDrift(diff1) : 'захват...';
+          if (!isCalibrated || inRail1) {
+            valF1.className = 'mono text-xs sm:text-sm font-bold text-cyan-300 mt-0.5';
+            driftF1.className = 'mono text-[10px] font-bold text-emerald-400';
+            pillF1.className = 'rounded-xl bg-cyan-950/40 border border-cyan-500/50 px-2.5 py-1.5 flex flex-col justify-between';
+          } else {
+            valF1.className = 'mono text-xs sm:text-sm font-bold text-rose-300 mt-0.5';
+            driftF1.className = 'mono text-[10px] font-bold text-rose-400';
+            pillF1.className = 'rounded-xl bg-rose-950/40 border border-rose-500/50 px-2.5 py-1.5 flex flex-col justify-between';
+          }
+        } else {
+          valF1.textContent = `У: ${Math.round(refF1)} Гц`;
+          valF1.className = 'mono text-xs sm:text-sm font-bold text-slate-500 mt-0.5';
+          driftF1.textContent = 'нет пика';
+          driftF1.className = 'mono text-[10px] font-bold text-slate-600';
+          pillF1.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between';
+        }
+
+        // Update Pill 2 (F4)
+        if (peak2Confidence > 0.35) {
+          valF2.textContent = `${Math.round(smoothPeak2Hz)} Гц`;
+          driftF2.textContent = isCalibrated ? formatDrift(diff2) : 'захват...';
+          if (!isCalibrated || inRail2) {
+            valF2.className = 'mono text-xs sm:text-sm font-bold text-amber-300 mt-0.5';
+            driftF2.className = 'mono text-[10px] font-bold text-emerald-400';
+            pillF2.className = 'rounded-xl bg-amber-950/40 border border-amber-500/50 px-2.5 py-1.5 flex flex-col justify-between';
+          } else {
+            valF2.className = 'mono text-xs sm:text-sm font-bold text-rose-300 mt-0.5';
+            driftF2.className = 'mono text-[10px] font-bold text-rose-400';
+            pillF2.className = 'rounded-xl bg-rose-950/40 border border-rose-500/50 px-2.5 py-1.5 flex flex-col justify-between';
+          }
+        } else {
+          valF2.textContent = `У: ${Math.round(refF2)} Гц`;
+          valF2.className = 'mono text-xs sm:text-sm font-bold text-slate-500 mt-0.5';
+          driftF2.textContent = 'нет пика';
+          driftF2.className = 'mono text-[10px] font-bold text-slate-600';
+          pillF2.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between';
+        }
+
+        // Update Center Spread Pill
+        if (!isCalibrated) {
+          valSpread.textContent = 'Ждём «У»...';
+          valSpread.className = 'mono text-xs sm:text-sm font-bold text-amber-300 mt-0.5';
+          pillSpread.className = 'rounded-xl bg-slate-900/75 border border-amber-500/40 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
+        } else if (isMountedInU) {
+          valSpread.textContent = 'В РАМКЕ «У» ✨';
+          valSpread.className = 'mono text-xs sm:text-sm font-bold text-emerald-300 mt-0.5';
+          pillSpread.className = 'rounded-xl bg-emerald-950/50 border border-emerald-500/60 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
+        } else if (isSpreadingApart) {
+          valSpread.textContent = spreadDelta > 0 ? '← РАЗЪЕХАЛИСЬ →' : '→ СЖАЛИСЬ ←';
+          valSpread.className = 'mono text-xs sm:text-sm font-bold text-rose-300 mt-0.5';
+          pillSpread.className = 'rounded-xl bg-rose-950/50 border border-rose-500/60 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
+        } else {
+          valSpread.textContent = `Δ ${Math.round(refSpread)} Гц`;
+          valSpread.className = 'mono text-xs sm:text-sm font-bold text-slate-400 mt-0.5';
+          pillSpread.className = 'rounded-xl bg-slate-900/75 border border-slate-800/80 px-2.5 py-1.5 flex flex-col justify-between items-center text-center';
+        }
+
+        // Update Top Praise Banner when Calibrated
+        if (isCalibrated) {
+          if (isMountedInU) {
+            holdDurationSec += dt;
+            praiseLevel = Math.min(1, praiseLevel + dt * 4);
+            appShell.classList.add('praise-active');
+
+            praiseCard.className =
+              'w-full rounded-2xl bg-emerald-950/75 border border-emerald-500/70 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200 shadow-lg shadow-emerald-950/50';
+            statusOrb.className = 'w-4 h-4 rounded-full bg-emerald-400 shadow-[0_0_14px_#10b981] shrink-0';
+
+            if (holdDurationSec < 1.8) {
+              praiseTitle.textContent = 'Отлично! Гласная вмонтирована в «У» ✨';
+            } else if (holdDurationSec < 4.5) {
+              praiseTitle.textContent = 'Браво! Форманты стоят в рельсах «У» 🔥';
+            } else {
+              praiseTitle.textContent = 'Мастерски! Все гласные в едином куполе «У» 👑';
+            }
+            praiseTitle.className = 'text-sm sm:text-lg font-extrabold tracking-tight text-emerald-300 truncate';
+            praiseSubtitle.textContent = `Обе форманты стабильны внутри коридоров ${Math.round(refF1)} и ${Math.round(refF2)} Гц`;
+            praiseSubtitle.className = 'text-xs sm:text-sm text-emerald-200/80 truncate';
+          } else {
+            holdDurationSec = Math.max(0, holdDurationSec - dt * 1.4);
+            praiseLevel = Math.max(0, praiseLevel - dt * 3);
+            appShell.classList.remove('praise-active');
+
+            if (isSpreadingApart) {
+              praiseCard.className =
+                'w-full rounded-2xl bg-rose-950/60 border border-rose-500/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
+              statusOrb.className = 'w-4 h-4 rounded-full bg-rose-400 shadow-[0_0_12px_#f43f5e] shrink-0';
+              praiseTitle.textContent = 'Форманты разъехались! Соберите гласную в «У»';
+              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-rose-200 truncate';
+              praiseSubtitle.textContent = 'Сохраняйте ощущение «У» в глотке при смене гласной';
+              praiseSubtitle.className = 'text-xs sm:text-sm text-rose-300/80 truncate';
+            } else if (peak1Confidence > 0.4 && peak2Confidence <= 0.4) {
+              praiseCard.className =
+                'w-full rounded-2xl bg-cyan-950/40 border border-cyan-700/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
+              statusOrb.className = 'w-4 h-4 rounded-full bg-cyan-400 shrink-0';
+              praiseTitle.textContent = 'Потерялась 2-я форманта — верните блеск «У»';
+              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-cyan-200 truncate';
+              praiseSubtitle.textContent = `Нужен второй пик в коридоре ~${Math.round(refF2)} Гц`;
+              praiseSubtitle.className = 'text-xs sm:text-sm text-cyan-300/75 truncate';
+            } else if (peak2Confidence > 0.4 && peak1Confidence <= 0.4) {
+              praiseCard.className =
+                'w-full rounded-2xl bg-amber-950/40 border border-amber-700/60 px-3.5 py-2.5 flex items-center justify-between transition-all duration-200';
+              statusOrb.className = 'w-4 h-4 rounded-full bg-amber-400 shrink-0';
+              praiseTitle.textContent = 'Потерялась 1-я форманта — верните купол «У»';
+              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-amber-200 truncate';
+              praiseSubtitle.textContent = `Удерживайте объём в коридоре ~${Math.round(refF1)} Гц`;
+              praiseSubtitle.className = 'text-xs sm:text-sm text-amber-300/75 truncate';
+            } else {
+              praiseCard.className =
+                'w-full rounded-2xl bg-slate-900/90 border border-slate-800/90 px-3.5 py-2.5 flex items-center justify-between transition-all duration-300';
+              statusOrb.className = 'w-4 h-4 rounded-full bg-slate-600 shrink-0';
+              praiseTitle.textContent = 'Шепчите гласные внутрь рельсов «У»...';
+              praiseTitle.className = 'text-sm sm:text-lg font-bold tracking-tight text-slate-200 truncate';
+              praiseSubtitle.textContent = 'Следите по водопаду, чтобы дорожки шли ровно вниз';
+              praiseSubtitle.className = 'text-xs sm:text-sm text-slate-400 truncate';
+            }
+          }
+        }
+
+        holdTimerEl.textContent = `${holdDurationSec.toFixed(1)} с`;
+
+        // Push current formant positions into the vertical waterfall trajectory buffer
+        trackHistory.unshift({
           f1: peak1Confidence > 0.35 ? smoothPeak1Hz : null,
           f2: peak2Confidence > 0.35 ? smoothPeak2Hz : null,
-          both: isBothLocked
+          in1: inRail1,
+          in2: inRail2,
+          mounted: isMountedInU,
+          spreading: isSpreadingApart
         });
-        if (historyTrail.length > MAX_HISTORY_POINTS) {
-          historyTrail.shift();
+
+        const maxRows = Math.ceil(waterfallHeight / WATERFALL_SPEED_PX) + 2;
+        if (trackHistory.length > maxRows) {
+          trackHistory.pop();
         }
       }
 
@@ -640,284 +794,308 @@
         return ((hz - MIN_DISPLAY_HZ) / (MAX_DISPLAY_HZ - MIN_DISPLAY_HZ)) * width;
       }
 
-      function drawVisualizer(analysis) {
-        const w = canvasWidth;
-        const h = canvasHeight;
-        ctx.clearRect(0, 0, w, h);
+      function xToFreq(x, width) {
+        return MIN_DISPLAY_HZ + (x / width) * (MAX_DISPLAY_HZ - MIN_DISPLAY_HZ);
+      }
 
-        // Split canvas: Top 66% is real-time spectrum, Bottom 34% is scrolling vowel ribbon
-        const specHeight = Math.round(h * 0.66);
-        const dividerY = specHeight;
-        const trailTop = specHeight + 24;
-        const trailHeight = h - trailTop - 36;
+      // Colormap turning normalized ridge intensity [0..1] into vivid thermal/aurora colors
+      function ridgeColorRGB(intensity, freqHz) {
+        if (intensity <= 0.04) {
+          return [5, 8, 17];
+        }
+        // Tint lower formant zone toward cyan/emerald and upper formant zone toward gold/magenta
+        const midHz = (refF1 + refF2) * 0.5;
+        const isUpperZone = freqHz > midHz;
 
-        // 1. Background subtle glow when both formants are locked
-        if (praiseLevel > 0.02) {
-          const radGrad = ctx.createRadialGradient(
-            w * 0.5, specHeight * 0.45, 10,
-            w * 0.5, specHeight * 0.45, w * 0.65
-          );
-          radGrad.addColorStop(0, `rgba(16, 185, 129, ${0.18 * praiseLevel})`);
-          radGrad.addColorStop(0.5, `rgba(34, 211, 238, ${0.08 * praiseLevel})`);
-          radGrad.addColorStop(1, 'rgba(7, 11, 20, 0)');
-          ctx.fillStyle = radGrad;
-          ctx.fillRect(0, 0, w, specHeight);
+        if (intensity < 0.35) {
+          const t = intensity / 0.35;
+          return [
+            Math.round(8 + t * 18),
+            Math.round(14 + t * 42),
+            Math.round(30 + t * 85)
+          ];
+        } else if (intensity < 0.7) {
+          const t = (intensity - 0.35) / 0.35;
+          if (!isUpperZone) {
+            return [
+              Math.round(26 - t * 6),
+              Math.round(56 + t * 145),
+              Math.round(115 + t * 120)
+            ];
+          } else {
+            return [
+              Math.round(40 + t * 195),
+              Math.round(50 + t * 115),
+              Math.round(110 - t * 65)
+            ];
+          }
+        } else {
+          const t = (intensity - 0.7) / 0.3;
+          if (!isUpperZone) {
+            return [
+              Math.round(20 + t * 215),
+              Math.round(201 + t * 54),
+              Math.round(235 + t * 20)
+            ];
+          } else {
+            return [
+              Math.round(235 + t * 20),
+              Math.round(165 + t * 85),
+              Math.round(45 + t * 165)
+            ];
+          }
+        }
+      }
+
+      function stepWaterfallBitmap() {
+        const w = waterfallCanvas.width;
+        const h = waterfallCanvas.height;
+        if (w <= 0 || h <= 0) return;
+
+        // 1. Shift existing waterfall down by WATERFALL_SPEED_PX pixels
+        waterfallCtx.drawImage(
+          waterfallCanvas,
+          0, 0, w, h - WATERFALL_SPEED_PX,
+          0, WATERFALL_SPEED_PX, w, h - WATERFALL_SPEED_PX
+        );
+
+        // 2. Render new top row (height = WATERFALL_SPEED_PX) from loudness-normalized ridge
+        const sampleRate = audioCtx ? audioCtx.sampleRate : 48000;
+        const binCount = analyser ? analyser.frequencyBinCount : 2048;
+        const rowImg = waterfallCtx.createImageData(w, WATERFALL_SPEED_PX);
+        const data = rowImg.data;
+
+        for (let x = 0; x < w; x++) {
+          const freq = xToFreq(x, w);
+          const exactBin = (freq / (sampleRate / 2)) * binCount;
+          const b0 = Math.max(0, Math.min(binCount - 1, Math.floor(exactBin)));
+          const b1 = Math.max(0, Math.min(binCount - 1, b0 + 1));
+          const frac = exactBin - b0;
+
+          const intensity = normalizedRidge[b0] * (1 - frac) + normalizedRidge[b1] * frac;
+          const [r, g, b] = ridgeColorRGB(intensity, freq);
+
+          for (let row = 0; row < WATERFALL_SPEED_PX; row++) {
+            const idx = (row * w + x) * 4;
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+          }
         }
 
-        // 2. Draw vertical frequency grid lines & labels
+        waterfallCtx.putImageData(rowImg, 0, 0);
+      }
+
+      function drawVisualizer() {
+        const w = canvasWidth;
+        const h = canvasHeight;
+        const wfTop = TOP_SOCKET_BAR_HEIGHT;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // 1. Update and draw scrolling offscreen waterfall bitmap
+        stepWaterfallBitmap();
+        ctx.drawImage(waterfallCanvas, 0, wfTop, w, waterfallHeight);
+
+        // 2. Draw vertical frequency grid lines
         ctx.lineWidth = 1;
         ctx.font = '500 10px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
 
         for (let freq = 1500; freq <= 4000; freq += 500) {
           const x = freqToX(freq, w);
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
           ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, specHeight);
+          ctx.moveTo(x, wfTop);
+          ctx.lineTo(x, h);
           ctx.stroke();
 
           ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
-          ctx.fillText(`${(freq / 1000).toFixed(1)}k`, x, specHeight - 6);
+          ctx.fillText(`${(freq / 1000).toFixed(1)}k`, x, h - 42);
         }
 
-        // 3. Draw Adaptive Target Zones (Zone 1 around anchorF1, Zone 2 around anchorF2)
-        const zoneHalfWidthHz = 230;
-        const f1LeftX = freqToX(anchorF1 - zoneHalfWidthHz, w);
-        const f1RightX = freqToX(anchorF1 + zoneHalfWidthHz, w);
-        const f2LeftX = freqToX(anchorF2 - zoneHalfWidthHz, w);
-        const f2RightX = freqToX(anchorF2 + zoneHalfWidthHz, w);
+        // 3. Draw the Two Vertical "У" Reference Rails running down the entire waterfall
+        const f1CenterX = freqToX(refF1, w);
+        const f1LeftX = freqToX(refF1 - RAIL_TOLERANCE_HZ, w);
+        const f1RightX = freqToX(refF1 + RAIL_TOLERANCE_HZ, w);
 
-        // Target Zone 1 (Cyan)
-        const z1Grad = ctx.createLinearGradient(0, 0, 0, specHeight);
-        z1Grad.addColorStop(0, `rgba(34, 211, 238, ${0.06 + peak1Confidence * 0.14})`);
-        z1Grad.addColorStop(1, 'rgba(34, 211, 238, 0.01)');
-        ctx.fillStyle = z1Grad;
-        ctx.fillRect(f1LeftX, 0, f1RightX - f1LeftX, specHeight - 20);
+        const f2CenterX = freqToX(refF2, w);
+        const f2LeftX = freqToX(refF2 - RAIL_TOLERANCE_HZ, w);
+        const f2RightX = freqToX(refF2 + RAIL_TOLERANCE_HZ, w);
 
-        ctx.strokeStyle = `rgba(34, 211, 238, ${0.25 + peak1Confidence * 0.45})`;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(f1LeftX, 6, f1RightX - f1LeftX, specHeight - 26);
+        // Subtle tunnel fill for Rail 1 ("У" F3) & Rail 2 ("У" F4)
+        ctx.fillStyle = isCalibrated ? 'rgba(34, 211, 238, 0.07)' : 'rgba(34, 211, 238, 0.03)';
+        ctx.fillRect(f1LeftX, wfTop, f1RightX - f1LeftX, waterfallHeight);
 
-        // Target Zone 2 (Amber)
-        const z2Grad = ctx.createLinearGradient(0, 0, 0, specHeight);
-        z2Grad.addColorStop(0, `rgba(251, 191, 36, ${0.06 + peak2Confidence * 0.14})`);
-        z2Grad.addColorStop(1, 'rgba(251, 191, 36, 0.01)');
-        ctx.fillStyle = z2Grad;
-        ctx.fillRect(f2LeftX, 0, f2RightX - f2LeftX, specHeight - 20);
+        ctx.fillStyle = isCalibrated ? 'rgba(251, 191, 36, 0.07)' : 'rgba(251, 191, 36, 0.03)';
+        ctx.fillRect(f2LeftX, wfTop, f2RightX - f2LeftX, waterfallHeight);
 
-        ctx.strokeStyle = `rgba(251, 191, 36, ${0.25 + peak2Confidence * 0.45})`;
-        ctx.strokeRect(f2LeftX, 6, f2RightX - f2LeftX, specHeight - 26);
-        ctx.setLineDash([]);
+        // Vertical rail boundary lines
+        ctx.save();
+        ctx.setLineDash(isCalibrated ? [6, 5] : [3, 6]);
+        ctx.lineWidth = 1.5;
 
-        // Labels inside Target Zones
-        ctx.font = '600 10px "Inter", sans-serif';
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.75)';
-        ctx.fillText('ЗОНА F3', (f1LeftX + f1RightX) * 0.5, 20);
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.75)';
-        ctx.fillText('ЗОНА F4', (f2LeftX + f2RightX) * 0.5, 20);
-
-        // 4. Draw Live Smoothed Spectral Envelope Curve
-        const sampleRate = audioCtx ? audioCtx.sampleRate : 48000;
-        const binCount = analyser ? analyser.frequencyBinCount : 2048;
-        const minBin = freqToBin(MIN_DISPLAY_HZ, sampleRate, binCount);
-        const maxBin = freqToBin(MAX_DISPLAY_HZ, sampleRate, binCount);
-
-        // Dynamic vertical normalization so quiet whisper still fills the graph nicely
-        const floorDb = Math.min(-88, analysis.meanEnvDb - 4);
-        const ceilingDb = Math.max(floorDb + 22, analysis.maxEnvDb + 5);
-
-        function dbToY(db) {
-          const norm = Math.max(0, Math.min(1, (db - floorDb) / (ceilingDb - floorDb)));
-          return (specHeight - 24) - norm * (specHeight - 58);
-        }
-
+        ctx.strokeStyle = isCalibrated ? 'rgba(34, 211, 238, 0.55)' : 'rgba(34, 211, 238, 0.3)';
         ctx.beginPath();
-        let firstPoint = true;
-        for (let b = minBin; b <= maxBin; b++) {
-          const freq = binToFreq(b, sampleRate, binCount);
-          const x = freqToX(freq, w);
-          const y = dbToY(smoothedEnvelope[b]);
-          if (firstPoint) {
-            ctx.moveTo(x, y);
-            firstPoint = false;
-          } else {
-            ctx.lineTo(x, y);
+        ctx.moveTo(f1LeftX, wfTop);
+        ctx.lineTo(f1LeftX, h);
+        ctx.moveTo(f1RightX, wfTop);
+        ctx.lineTo(f1RightX, h);
+        ctx.stroke();
+
+        ctx.strokeStyle = isCalibrated ? 'rgba(251, 191, 36, 0.55)' : 'rgba(251, 191, 36, 0.3)';
+        ctx.beginPath();
+        ctx.moveTo(f2LeftX, wfTop);
+        ctx.lineTo(f2LeftX, h);
+        ctx.moveTo(f2RightX, wfTop);
+        ctx.lineTo(f2RightX, h);
+        ctx.stroke();
+
+        // Center hairline of each "У" rail
+        ctx.setLineDash([2, 4]);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(f1CenterX, wfTop);
+        ctx.lineTo(f1CenterX, h);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(f2CenterX, wfTop);
+        ctx.lineTo(f2CenterX, h);
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. Overlay high-contrast Formant Center Trajectories & Green Lock Ribbon
+        if (trackHistory.length > 1) {
+          // Horizontal emerald rungs when both formants are mounted inside the "У" rails
+          for (let i = 0; i < trackHistory.length; i++) {
+            const pt = trackHistory[i];
+            const y = wfTop + i * WATERFALL_SPEED_PX;
+            if (pt.f1 !== null && pt.f2 !== null) {
+              const x1 = freqToX(pt.f1, w);
+              const x2 = freqToX(pt.f2, w);
+              if (pt.mounted) {
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.16)';
+                ctx.fillRect(x1, y, x2 - x1, WATERFALL_SPEED_PX);
+              } else if (pt.spreading) {
+                ctx.fillStyle = 'rgba(244, 63, 94, 0.12)';
+                ctx.fillRect(x1, y, x2 - x1, WATERFALL_SPEED_PX);
+              }
+            }
+          }
+
+          // Crisp F1 Center Spine
+          ctx.lineWidth = 2.8;
+          ctx.lineJoin = 'round';
+          for (let i = 1; i < trackHistory.length; i++) {
+            const prev = trackHistory[i - 1];
+            const curr = trackHistory[i];
+            if (prev.f1 !== null && curr.f1 !== null) {
+              ctx.strokeStyle = (!isCalibrated || curr.in1) ? '#22d3ee' : '#fb7185';
+              ctx.beginPath();
+              ctx.moveTo(freqToX(prev.f1, w), wfTop + (i - 1) * WATERFALL_SPEED_PX);
+              ctx.lineTo(freqToX(curr.f1, w), wfTop + i * WATERFALL_SPEED_PX);
+              ctx.stroke();
+            }
+            if (prev.f2 !== null && curr.f2 !== null) {
+              ctx.strokeStyle = (!isCalibrated || curr.in2) ? '#fbbf24' : '#fb7185';
+              ctx.beginPath();
+              ctx.moveTo(freqToX(prev.f2, w), wfTop + (i - 1) * WATERFALL_SPEED_PX);
+              ctx.lineTo(freqToX(curr.f2, w), wfTop + i * WATERFALL_SPEED_PX);
+              ctx.stroke();
+            }
           }
         }
 
-        // Stroke colorful spectral curve
-        const lineGrad = ctx.createLinearGradient(0, 0, w, 0);
-        lineGrad.addColorStop(0, '#38bdf8');
-        lineGrad.addColorStop(0.45, '#22d3ee');
-        lineGrad.addColorStop(0.75, '#fbbf24');
-        lineGrad.addColorStop(1, '#f43f5e');
+        // 5. Draw Top Socket Header ("Пазы эталонной «У»") above the waterfall
+        ctx.fillStyle = '#090f1d';
+        ctx.fillRect(0, 0, w, wfTop);
 
-        ctx.strokeStyle = lineGrad;
-        ctx.lineWidth = 3;
-        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(51, 65, 85, 0.9)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, wfTop);
+        ctx.lineTo(w, wfTop);
         ctx.stroke();
 
-        // Fill under spectral curve
-        ctx.lineTo(w, specHeight - 22);
-        ctx.lineTo(0, specHeight - 22);
-        ctx.closePath();
-        const fillGrad = ctx.createLinearGradient(0, 20, 0, specHeight - 20);
-        fillGrad.addColorStop(0, praiseLevel > 0.3 ? 'rgba(16, 185, 129, 0.34)' : 'rgba(56, 189, 248, 0.22)');
-        fillGrad.addColorStop(1, 'rgba(15, 23, 42, 0.02)');
-        ctx.fillStyle = fillGrad;
+        // Draw "У" Target Sockets in the top header
+        const socketY = 36;
+        ctx.fillStyle = 'rgba(34, 211, 238, 0.14)';
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(f1LeftX, socketY - 12, f1RightX - f1LeftX, 24, 8);
         ctx.fill();
+        ctx.stroke();
 
-        // 5. Draw Detected Formant Orbs & Glowing Chiaroscuro Bridge
-        const p1Bin = freqToBin(smoothPeak1Hz, sampleRate, binCount);
-        const p2Bin = freqToBin(smoothPeak2Hz, sampleRate, binCount);
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.14)';
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
+        ctx.beginPath();
+        ctx.roundRect(f2LeftX, socketY - 12, f2RightX - f2LeftX, 24, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '700 9px "Inter", sans-serif';
+        ctx.fillStyle = 'rgba(34, 211, 238, 0.9)';
+        ctx.fillText(`ПАЗ «У» (${Math.round(refF1)})`, f1CenterX, 14);
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+        ctx.fillText(`ПАЗ «У» (${Math.round(refF2)})`, f2CenterX, 14);
+
+        // 6. Draw Live Formant Orbs & Elastic Bridge inside the Top Socket Header
         const p1X = freqToX(smoothPeak1Hz, w);
-        const p1Y = dbToY(smoothedEnvelope[p1Bin]);
         const p2X = freqToX(smoothPeak2Hz, w);
-        const p2Y = dbToY(smoothedEnvelope[p2Bin]);
+        const in1 = Math.abs(smoothPeak1Hz - refF1) <= RAIL_TOLERANCE_HZ;
+        const in2 = Math.abs(smoothPeak2Hz - refF2) <= RAIL_TOLERANCE_HZ;
 
-        // If both peaks are active, draw a glowing emerald/gold arch connecting them!
         if (peak1Confidence > 0.35 && peak2Confidence > 0.35) {
+          const bothIn = (!isCalibrated) || (in1 && in2);
           ctx.save();
           ctx.beginPath();
-          const midX = (p1X + p2X) * 0.5;
-          const midY = Math.min(p1Y, p2Y) - 28;
-          ctx.moveTo(p1X, p1Y);
-          ctx.quadraticCurveTo(midX, midY, p2X, p2Y);
-
-          const bridgeGrad = ctx.createLinearGradient(p1X, p1Y, p2X, p2Y);
-          bridgeGrad.addColorStop(0, '#22d3ee');
-          bridgeGrad.addColorStop(0.5, '#10b981');
-          bridgeGrad.addColorStop(1, '#fbbf24');
-
-          ctx.strokeStyle = bridgeGrad;
-          ctx.lineWidth = 3.5;
-          ctx.shadowColor = '#10b981';
-          ctx.shadowBlur = 14;
+          ctx.moveTo(p1X, socketY);
+          ctx.lineTo(p2X, socketY);
+          ctx.strokeStyle = bothIn ? '#10b981' : '#f43f5e';
+          ctx.lineWidth = 4;
+          ctx.shadowColor = bothIn ? '#10b981' : '#f43f5e';
+          ctx.shadowBlur = 12;
           ctx.stroke();
-
-          // Badge in center of bridge
-          ctx.font = '700 11px "Inter", sans-serif';
-          ctx.fillStyle = '#6ee7b7';
-          ctx.fillText('CHIAROSCURO ✨', midX, midY - 6);
           ctx.restore();
         }
 
-        // Draw Peak 1 Marker (Cyan)
+        // Live Orb 1
         if (peak1Confidence > 0.2) {
           ctx.save();
           ctx.globalAlpha = peak1Confidence;
+          const orbColor = (!isCalibrated || in1) ? '#22d3ee' : '#f43f5e';
           ctx.beginPath();
-          ctx.arc(p1X, p1Y, 8, 0, Math.PI * 2);
-          ctx.fillStyle = '#22d3ee';
-          ctx.shadowColor = '#22d3ee';
-          ctx.shadowBlur = 16;
+          ctx.arc(p1X, socketY, 9, 0, Math.PI * 2);
+          ctx.fillStyle = orbColor;
+          ctx.shadowColor = orbColor;
+          ctx.shadowBlur = 14;
           ctx.fill();
           ctx.lineWidth = 2.5;
           ctx.strokeStyle = '#ffffff';
           ctx.stroke();
-
-          ctx.font = '700 11px "JetBrains Mono", monospace';
-          ctx.fillStyle = '#a5f3fc';
-          ctx.fillText(`${Math.round(smoothPeak1Hz)}`, p1X, Math.max(16, p1Y - 14));
           ctx.restore();
         }
 
-        // Draw Peak 2 Marker (Amber)
+        // Live Orb 2
         if (peak2Confidence > 0.2) {
           ctx.save();
           ctx.globalAlpha = peak2Confidence;
+          const orbColor = (!isCalibrated || in2) ? '#fbbf24' : '#f43f5e';
           ctx.beginPath();
-          ctx.arc(p2X, p2Y, 8, 0, Math.PI * 2);
-          ctx.fillStyle = '#fbbf24';
-          ctx.shadowColor = '#fbbf24';
-          ctx.shadowBlur = 16;
+          ctx.arc(p2X, socketY, 9, 0, Math.PI * 2);
+          ctx.fillStyle = orbColor;
+          ctx.shadowColor = orbColor;
+          ctx.shadowBlur = 14;
           ctx.fill();
           ctx.lineWidth = 2.5;
           ctx.strokeStyle = '#ffffff';
           ctx.stroke();
-
-          ctx.font = '700 11px "JetBrains Mono", monospace';
-          ctx.fillStyle = '#fde68a';
-          ctx.fillText(`${Math.round(smoothPeak2Hz)}`, p2X, Math.max(16, p2Y - 14));
           ctx.restore();
-        }
-
-        // 6. Divider & Bottom Scrolling Trail ("Лента гласных арии")
-        ctx.strokeStyle = 'rgba(51, 65, 85, 0.8)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, dividerY);
-        ctx.lineTo(w, dividerY);
-        ctx.stroke();
-
-        ctx.font = '600 10px "Inter", sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
-        ctx.fillText('ЛЕНТА УДЕРЖАНИЯ ГЛАСНЫХ (ИСТОРИЯ ШЁПОТА)', 12, dividerY + 15);
-
-        if (trailHeight > 20 && historyTrail.length > 1) {
-          const stepX = w / MAX_HISTORY_POINTS;
-
-          function freqToTrailY(hz) {
-            const norm = Math.max(0, Math.min(1, (hz - 1700) / (4100 - 1700)));
-            return trailTop + trailHeight - norm * trailHeight;
-          }
-
-          // Highlight vertical emerald bars wherever BOTH formants were locked simultaneously
-          for (let i = 0; i < historyTrail.length; i++) {
-            const item = historyTrail[i];
-            const x = w - (historyTrail.length - i) * stepX;
-            if (item.both && item.f1 && item.f2) {
-              const y1 = freqToTrailY(item.f1);
-              const y2 = freqToTrailY(item.f2);
-              ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
-              ctx.fillRect(x, Math.min(y1, y2), Math.ceil(stepX) + 1, Math.abs(y1 - y2));
-            }
-          }
-
-          // Draw F1 Trail (Cyan)
-          ctx.lineWidth = 2.5;
-          ctx.strokeStyle = '#22d3ee';
-          ctx.beginPath();
-          let drawingF1 = false;
-          for (let i = 0; i < historyTrail.length; i++) {
-            const item = historyTrail[i];
-            const x = w - (historyTrail.length - i) * stepX;
-            if (item.f1 !== null) {
-              const y = freqToTrailY(item.f1);
-              if (!drawingF1) {
-                ctx.moveTo(x, y);
-                drawingF1 = true;
-              } else {
-                ctx.lineTo(x, y);
-              }
-            } else {
-              drawingF1 = false;
-            }
-          }
-          ctx.stroke();
-
-          // Draw F2 Trail (Amber)
-          ctx.strokeStyle = '#fbbf24';
-          ctx.beginPath();
-          let drawingF2 = false;
-          for (let i = 0; i < historyTrail.length; i++) {
-            const item = historyTrail[i];
-            const x = w - (historyTrail.length - i) * stepX;
-            if (item.f2 !== null) {
-              const y = freqToTrailY(item.f2);
-              if (!drawingF2) {
-                ctx.moveTo(x, y);
-                drawingF2 = true;
-              } else {
-                ctx.lineTo(x, y);
-              }
-            } else {
-              drawingF2 = false;
-            }
-          }
-          ctx.stroke();
         }
       }
 
@@ -928,7 +1106,7 @@
 
         const analysis = analyzeWhisperFormants();
         updateStateAndUI(analysis, dt);
-        drawVisualizer(analysis);
+        drawVisualizer();
 
         requestAnimationFrame(animateLoop);
       }
